@@ -1,2 +1,32 @@
+# Environment
 .env
+.env.local
+.env.production
+
+# Documentation (private)
 .docs/
+
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Native builds
+ios/
+android/
+
+# Build
+build/
+
+# OS
+.DS_Store
+*.log
+
+# TypeScript
+*.tsbuildinfo
+
+# Jest
+coverage/
