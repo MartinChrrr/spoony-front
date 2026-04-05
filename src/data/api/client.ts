@@ -15,8 +15,11 @@ const STORAGE_KEYS = {
 const TIMEOUT_MS = 10_000;
 
 interface RefreshTokenResponse {
-  accessToken: string;
-  refreshToken: string;
+  status: string;
+  data: {
+    accessToken: string;
+    refreshToken: string;
+  };
 }
 
 interface QueueEntry {
@@ -112,12 +115,12 @@ api.interceptors.response.use(
       }
 
       const response = await axios.post<RefreshTokenResponse>(
-        `${baseURL}/auth/refresh`,
+        `${baseURL}/api/auth/refresh`,
         { refreshToken },
         { timeout: TIMEOUT_MS },
       );
 
-      const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data;
+      const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data.data;
 
       await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
       await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
@@ -134,7 +137,11 @@ api.interceptors.response.use(
           ? refreshError
           : new AxiosError(
               refreshError instanceof Error ? refreshError.message : 'TOKEN_REFRESH_FAILED',
+              'ERR_REFRESH_FAILED',
             );
+      if (!(refreshError instanceof AxiosError)) {
+        axiosRefreshError.cause = refreshError;
+      }
 
       await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
       await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);

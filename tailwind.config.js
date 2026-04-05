@@ -12,10 +12,10 @@ module.exports = {
         "brown-dark": "#6B5744",
         "brown-medium": "#8B7355",
         "brown-light": "#C4B5A0",
-        orange: "#E8700A",
+        orange: "#C45E08",
         "orange-light": "#FFAB5C",
         white: "#FFFFFF",
-        error: "#D32F2F",
+        error: "#C62828",
         success: "#388E3C",
       },
       fontFamily: {

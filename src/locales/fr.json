@@ -1,1 +1,57 @@
-{}
+{
+  "common": {
+    "appName": "Spoony",
+    "loading": "Chargement en cours",
+    "offlineBanner": "Pas de connexion. Vos données sont là, mais vous ne pouvez pas les modifier."
+  },
+  "tabs": {
+    "home": "Accueil",
+    "tasks": "Tâches",
+    "calendar": "Calendrier",
+    "profile": "Profil"
+  },
+  "auth": {
+    "loginSubtitle": "Gérez votre énergie en douceur",
+    "emailLabel": "Email",
+    "emailPlaceholder": "votre@email.com",
+    "passwordLabel": "Mot de passe",
+    "passwordPlaceholder": "Votre mot de passe",
+    "passwordFieldHint": "Saisissez votre mot de passe",
+    "loginButton": "Se connecter",
+    "loginButtonHint": "Appuyez pour vous connecter à votre compte",
+    "loginError": "Email ou mot de passe incorrect",
+    "wrongCredentials": "Email ou mot de passe incorrect",
+    "goToRegister": "Pas encore de compte ? S'inscrire",
+    "goToRegisterHint": "Ouvre la page d'inscription",
+    "registerSubtitle": "Créez votre compte",
+    "firstNameLabel": "Prénom",
+    "firstNamePlaceholder": "Votre prénom",
+    "passwordHint": "8 caractères minimum",
+    "registerButton": "S'inscrire",
+    "registerButtonHint": "Appuyez pour créer votre compte",
+    "registerError": "Une erreur est survenue lors de l'inscription",
+    "emailAlreadyExists": "Un compte existe déjà avec cet email",
+    "goToLogin": "Déjà un compte ? Se connecter",
+    "goToLoginHint": "Ouvre la page de connexion"
+  },
+  "errors": {
+    "network": "Pas de connexion internet",
+    "server": "Une erreur serveur est survenue. Réessayez plus tard."
+  },
+  "onboarding": {
+    "welcomeTitle": "Bienvenue sur Spoony",
+    "welcomeDescription": "Spoony vous aide à gérer votre énergie au quotidien. Pas de jugement, juste un outil bienveillant pour vous accompagner.",
+    "spoonsTitle": "La théorie des cuillères",
+    "spoonsDescription": "Chaque jour, vous disposez d'un nombre limité de \"cuillères\" d'énergie. Spoony vous aide à les répartir selon vos priorités et votre état du moment.",
+    "disclaimerTitle": "Avertissement médical",
+    "disclaimerDescription": "Spoony est un outil d'aide à l'organisation, pas un dispositif médical. Il ne remplace en aucun cas l'avis d'un professionnel de santé. Consultez votre médecin pour toute question relative à votre condition.",
+    "disclaimerCheckbox": "J'ai lu et j'accepte l'avertissement médical",
+    "stepIndicator": "Étape {{current}} sur {{total}}",
+    "previousButton": "Précédent",
+    "previousButtonHint": "Revenir à l'étape précédente",
+    "nextButton": "Suivant",
+    "nextButtonHint": "Passer à l'étape suivante",
+    "startButton": "Commencer",
+    "startButtonHint": "Démarrer l'application"
+  }
+}

@@ -1,0 +1,11 @@
+export const COLORS = {
+  CREAM: '#F7F0E8',
+  BROWN_DARK: '#6B5744',
+  BROWN_MEDIUM: '#8B7355',
+  BROWN_LIGHT: '#C4B5A0',
+  ORANGE: '#C45E08',
+  ORANGE_LIGHT: '#FFAB5C',
+  WHITE: '#FFFFFF',
+  ERROR: '#C62828',
+  SUCCESS: '#388E3C',
+} as const;

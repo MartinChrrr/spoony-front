@@ -2,7 +2,7 @@ import { render, fireEvent } from "@testing-library/react-native";
 import { StyleSheet } from "react-native";
 import { Button } from "@/components/ui/button-custom";
 
-jest.mock("expo-haptics");
+// expo-haptics is not installed — mock handled via moduleNameMapper in package.json
 
 describe("Button Custom", () => {
   it("should_RenderWithLabel_When_LabelProvided", () => {

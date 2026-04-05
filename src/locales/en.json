@@ -1,1 +1,57 @@
-{}
+{
+  "common": {
+    "appName": "Spoony",
+    "loading": "Loading",
+    "offlineBanner": "No connection. Your data is here, but you cannot modify it."
+  },
+  "tabs": {
+    "home": "Home",
+    "tasks": "Tasks",
+    "calendar": "Calendar",
+    "profile": "Profile"
+  },
+  "auth": {
+    "loginSubtitle": "Manage your energy gently",
+    "emailLabel": "Email",
+    "emailPlaceholder": "your@email.com",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Your password",
+    "passwordFieldHint": "Enter your password",
+    "loginButton": "Log in",
+    "loginButtonHint": "Tap to log in to your account",
+    "loginError": "Invalid email or password",
+    "wrongCredentials": "Invalid email or password",
+    "goToRegister": "No account yet? Sign up",
+    "goToRegisterHint": "Opens the registration page",
+    "registerSubtitle": "Create your account",
+    "firstNameLabel": "First name",
+    "firstNamePlaceholder": "Your first name",
+    "passwordHint": "8 characters minimum",
+    "registerButton": "Sign up",
+    "registerButtonHint": "Tap to create your account",
+    "registerError": "An error occurred during registration",
+    "emailAlreadyExists": "An account already exists with this email",
+    "goToLogin": "Already have an account? Log in",
+    "goToLoginHint": "Opens the login page"
+  },
+  "errors": {
+    "network": "No internet connection",
+    "server": "A server error occurred. Please try again later."
+  },
+  "onboarding": {
+    "welcomeTitle": "Welcome to Spoony",
+    "welcomeDescription": "Spoony helps you manage your daily energy. No judgement, just a caring tool to support you.",
+    "spoonsTitle": "The Spoon Theory",
+    "spoonsDescription": "Each day, you have a limited number of energy \"spoons\". Spoony helps you allocate them based on your priorities and how you feel.",
+    "disclaimerTitle": "Medical Disclaimer",
+    "disclaimerDescription": "Spoony is an organizational tool, not a medical device. It does not replace professional medical advice. Consult your doctor for any questions about your condition.",
+    "disclaimerCheckbox": "I have read and accept the medical disclaimer",
+    "stepIndicator": "Step {{current}} of {{total}}",
+    "previousButton": "Previous",
+    "previousButtonHint": "Go back to the previous step",
+    "nextButton": "Next",
+    "nextButtonHint": "Go to the next step",
+    "startButton": "Get started",
+    "startButtonHint": "Start the application"
+  }
+}
