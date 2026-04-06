@@ -1,0 +1,179 @@
+import React from 'react';
+import { render, fireEvent, screen, waitFor } from '@testing-library/react-native';
+
+// ---------------------------------------------------------------------------
+// Mocks
+// ---------------------------------------------------------------------------
+
+const mockReplace = jest.fn();
+
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ replace: mockReplace }),
+}));
+
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}));
+
+const mockCreateEnergyMutateAsync = jest.fn().mockResolvedValue({});
+let mockCreateEnergyIsPending = false;
+
+jest.mock('@tanstack/react-query', () => ({
+  useQuery: jest.fn(() => ({
+    data: null,
+    isLoading: false,
+  })),
+  useMutation: jest.fn(() => ({
+    mutateAsync: mockCreateEnergyMutateAsync,
+    isPending: mockCreateEnergyIsPending,
+  })),
+}));
+
+jest.mock('@/data/api/endpoints/energy', () => ({
+  energyEndpoints: {
+    declare: jest.fn(),
+  },
+}));
+
+// ---------------------------------------------------------------------------
+// Fixtures
+// ---------------------------------------------------------------------------
+
+const PRESETS = [
+  { label: 'checkin.presetExhausted', spoons: 3 },
+  { label: 'checkin.presetMedium', spoons: 5 },
+  { label: 'checkin.presetGood', spoons: 8 },
+  { label: 'checkin.presetInShape', spoons: 11 },
+  { label: 'checkin.presetNotToday', spoons: 0 },
+];
+
+// ---------------------------------------------------------------------------
+// Subject under test (imported after mocks are in place)
+// ---------------------------------------------------------------------------
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const CheckinStep2 = require('../../app/checkin/step2').default;
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+describe('CheckinStep2', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCreateEnergyIsPending = false;
+    mockCreateEnergyMutateAsync.mockResolvedValue({});
+  });
+
+  // -------------------------------------------------------------------------
+  // 1. Select a preset — it becomes visually selected
+  // -------------------------------------------------------------------------
+
+  it('should_SelectPreset_When_PresetTapped', () => {
+    // Arrange
+    render(<CheckinStep2 />);
+
+    const presetButton = screen.getByText('checkin.presetExhausted');
+
+    // Act
+    fireEvent.press(presetButton);
+
+    // Assert — the button (or its accessible container) is marked selected/checked
+    const selectedPreset = screen.getByTestId('preset-checkin.presetExhausted');
+    const state = selectedPreset.props.accessibilityState;
+    expect(state?.selected ?? state?.checked).toBe(true);
+  });
+
+  // -------------------------------------------------------------------------
+  // 2. Slider value updates when a preset is tapped
+  // -------------------------------------------------------------------------
+
+  it('should_UpdateSlider_When_PresetSelected', () => {
+    // Arrange
+    render(<CheckinStep2 />);
+
+    // Act — tap the "Épuisé" preset (spoons: 3)
+    fireEvent.press(screen.getByText('checkin.presetExhausted'));
+
+    // Assert
+    const slider = screen.getByTestId('spoons-slider');
+    expect(slider.props.value).toBe(3);
+  });
+
+  // -------------------------------------------------------------------------
+  // 3. Navigate to zero-energy when 0 spoons are selected
+  // -------------------------------------------------------------------------
+
+  it('should_NavigateToZeroEnergy_When_ZeroSpoonsSelected', () => {
+    // Arrange
+    render(<CheckinStep2 />);
+
+    // Act — tap "Pas aujourd'hui" preset (spoons: 0) then continue
+    fireEvent.press(screen.getByText('checkin.presetNotToday'));
+    fireEvent.press(screen.getByText('checkin.continue'));
+
+    // Assert — navigates immediately without calling createEnergy
+    expect(mockReplace).toHaveBeenCalledWith('/checkin/zero-energy');
+    expect(mockCreateEnergyMutateAsync).not.toHaveBeenCalled();
+  });
+
+  // -------------------------------------------------------------------------
+  // 4. Navigate to step 3 when non-zero spoons are selected
+  // -------------------------------------------------------------------------
+
+  it('should_NavigateToStep3_When_NonZeroSpoonsSelected', async () => {
+    // Arrange
+    render(<CheckinStep2 />);
+
+    // Act — tap any non-zero preset then continue
+    fireEvent.press(screen.getByText('checkin.presetMedium'));
+    fireEvent.press(screen.getByText('checkin.continue'));
+
+    // Assert — navigation happens after async mutation resolves
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.stringContaining('/checkin/step3?spoons='),
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 5. createEnergy mutation called with correct spoons on continue
+  // -------------------------------------------------------------------------
+
+  it('should_CallCreateEnergy_When_ContinuePressed', async () => {
+    // Arrange
+    render(<CheckinStep2 />);
+
+    // Act — select "Bon" preset (spoons: 8) then continue
+    fireEvent.press(screen.getByText('checkin.presetGood'));
+    fireEvent.press(screen.getByText('checkin.continue'));
+
+    // Assert
+    await waitFor(() => {
+      expect(mockCreateEnergyMutateAsync).toHaveBeenCalledWith({ spoons: 8 });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 6. Slider change updates the selected spoon value
+  // -------------------------------------------------------------------------
+
+  it('should_UpdateSpoons_When_SliderValueChanges', async () => {
+    // Arrange
+    render(<CheckinStep2 />);
+
+    const slider = screen.getByTestId('spoons-slider');
+
+    // Act — simulate slider move to value 7
+    fireEvent(slider, 'onValueChange', 7);
+
+    // Continue to trigger the mutation
+    fireEvent.press(screen.getByText('checkin.continue'));
+
+    // Assert
+    await waitFor(() => {
+      expect(mockCreateEnergyMutateAsync).toHaveBeenCalledWith({ spoons: 7 });
+    });
+  });
+});
