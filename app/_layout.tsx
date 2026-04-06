@@ -35,9 +35,10 @@ function AuthGate(): React.ReactElement {
       <View
         className="flex-1 bg-cream items-center justify-center"
         accessible
+        accessibilityRole="progressbar"
         accessibilityLabel={t('common.loading')}
       >
-        <ActivityIndicator size="large" color={COLORS.ORANGE} />
+        <ActivityIndicator size="large" color={COLORS.ORANGE} importantForAccessibility="no" />
       </View>
     );
   }

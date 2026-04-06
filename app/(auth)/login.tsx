@@ -6,6 +6,7 @@ import axios from 'axios';
 
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { COLORS } from '@/constants/colors';
+import { isValidEmail } from '@/utils/validation';
 
 export default function LoginScreen(): React.ReactElement {
   const { login } = useAuth();
@@ -21,7 +22,7 @@ export default function LoginScreen(): React.ReactElement {
 
   useEffect(() => () => { isMounted.current = false; }, []);
 
-  const isValid = email.trim().length > 0 && password.length > 0;
+  const isValid = isValidEmail(email.trim()) && password.length > 0;
 
   const handleLogin = async (): Promise<void> => {
     if (!isValid || isSubmitting) return;
@@ -89,7 +90,7 @@ export default function LoginScreen(): React.ReactElement {
             value={email}
             onChangeText={setEmail}
             placeholder={t('auth.emailPlaceholder')}
-            placeholderTextColor={COLORS.BROWN_LIGHT}
+            placeholderTextColor={COLORS.BROWN_DARK}
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
@@ -111,7 +112,7 @@ export default function LoginScreen(): React.ReactElement {
             value={password}
             onChangeText={setPassword}
             placeholder={t('auth.passwordPlaceholder')}
-            placeholderTextColor={COLORS.BROWN_LIGHT}
+            placeholderTextColor={COLORS.BROWN_DARK}
             secureTextEntry
             autoComplete="password"
             textContentType="password"

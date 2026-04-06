@@ -26,5 +26,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   scheme: "spoony",
   extra: {
     apiBaseUrl: process.env.API_BASE_URL ?? 'http://localhost:8080',
+    privacyPolicyUrl: 'https://spoony-app.com/privacy',
   },
 });

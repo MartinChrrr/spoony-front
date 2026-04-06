@@ -32,6 +32,7 @@ jest.mock('@/data/api/endpoints/auth', () => ({
   authEndpoints: {
     login: jest.fn(),
     register: jest.fn(),
+    refresh: jest.fn(),
   },
 }));
 
@@ -163,6 +164,51 @@ describe('AuthContext', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(result.current.user).toBeNull();
+  });
+
+  // -------------------------------------------------------------------------
+  // 3.5. Expired access token + valid refresh token -> restore user
+  // -------------------------------------------------------------------------
+
+  it('should_RestoreUser_When_AccessTokenExpiredAndRefreshSucceeds', async () => {
+    // Arrange
+    const NEW_ACCESS_TOKEN = 'new-access-token';
+    const NEW_REFRESH_TOKEN = 'new-refresh-token';
+
+    mockedSecureStore.getItemAsync.mockImplementation((key) => {
+      if (key === 'accessToken') return Promise.resolve(MOCK_ACCESS_TOKEN);
+      if (key === 'refreshToken') return Promise.resolve(MOCK_REFRESH_TOKEN);
+      return Promise.resolve(null);
+    });
+
+    // First call: decode the stored (expired) access token in restoreSession
+    // Subsequent calls: decode the new access token in decodeUser
+    mockedJwtDecode
+      .mockReturnValueOnce(EXPIRED_JWT_PAYLOAD as never)
+      .mockReturnValue(MOCK_JWT_PAYLOAD as never);
+
+    mockedAuthEndpoints.refresh.mockResolvedValue({
+      data: {
+        status: 'success' as const,
+        data: { accessToken: NEW_ACCESS_TOKEN, refreshToken: NEW_REFRESH_TOKEN },
+        message: null,
+      },
+    } as never);
+
+    // Act
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    // Assert
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.user).not.toBeNull();
+    expect(result.current.user).toEqual({
+      id: MOCK_JWT_PAYLOAD.sub,
+      email: MOCK_JWT_PAYLOAD.email,
+      firstName: MOCK_JWT_PAYLOAD.firstName,
+    });
+    expect(mockedSecureStore.setItemAsync).toHaveBeenCalledWith('accessToken', NEW_ACCESS_TOKEN);
+    expect(mockedSecureStore.setItemAsync).toHaveBeenCalledWith('refreshToken', NEW_REFRESH_TOKEN);
   });
 
   // -------------------------------------------------------------------------

@@ -70,20 +70,36 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
     const restoreSession = async (): Promise<void> => {
       try {
         const storedToken = await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-        if (storedToken !== null) {
-          const payload = jwtDecode<JwtPayload>(storedToken);
-          const isExpired = payload.exp !== undefined && payload.exp * 1000 < Date.now();
-          if (isExpired) {
-            setIsLoading(false);
+        if (storedToken === null) return;
+
+        const payload = jwtDecode<JwtPayload>(storedToken);
+        const isExpired = payload.exp !== undefined && payload.exp * 1000 < Date.now();
+
+        let activeToken = storedToken;
+
+        if (isExpired) {
+          const refreshToken = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+          if (refreshToken === null) return;
+
+          try {
+            const response = await authEndpoints.refresh({ refreshToken });
+            const tokens = response.data.data;
+            if (tokens === null) return;
+
+            await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, tokens.accessToken);
+            await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, tokens.refreshToken);
+            activeToken = tokens.accessToken;
+          } catch {
             return;
           }
-          const restoredUser = decodeUser(storedToken);
-          if (restoredUser !== null) {
-            setUser(restoredUser);
-            const onboardingValue = await AsyncStorage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
-            if (onboardingValue === null) {
-              setHasCompletedOnboarding(false);
-            }
+        }
+
+        const restoredUser = decodeUser(activeToken);
+        if (restoredUser !== null) {
+          setUser(restoredUser);
+          const onboardingValue = await AsyncStorage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
+          if (onboardingValue === null) {
+            setHasCompletedOnboarding(false);
           }
         }
       } catch (error) {

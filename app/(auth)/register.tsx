@@ -4,6 +4,7 @@ import { Link } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 
+import { isValidEmail } from '@/utils/validation';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { COLORS } from '@/constants/colors';
 
@@ -23,7 +24,7 @@ export default function RegisterScreen(): React.ReactElement {
 
   useEffect(() => () => { isMounted.current = false; }, []);
 
-  const isValid = firstName.trim().length > 0 && email.trim().length > 0 && password.length >= 8;
+  const isValid = firstName.trim().length > 0 && isValidEmail(email.trim()) && password.length >= 8;
 
   const handleRegister = async (): Promise<void> => {
     if (!isValid || isSubmitting) return;
@@ -89,7 +90,7 @@ export default function RegisterScreen(): React.ReactElement {
             value={firstName}
             onChangeText={setFirstName}
             placeholder={t('auth.firstNamePlaceholder')}
-            placeholderTextColor={COLORS.BROWN_LIGHT}
+            placeholderTextColor={COLORS.BROWN_DARK}
             autoCapitalize="words"
             autoComplete="given-name"
             textContentType="givenName"
@@ -108,7 +109,7 @@ export default function RegisterScreen(): React.ReactElement {
             value={email}
             onChangeText={setEmail}
             placeholder={t('auth.emailPlaceholder')}
-            placeholderTextColor={COLORS.BROWN_LIGHT}
+            placeholderTextColor={COLORS.BROWN_DARK}
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
@@ -128,7 +129,7 @@ export default function RegisterScreen(): React.ReactElement {
             value={password}
             onChangeText={setPassword}
             placeholder={t('auth.passwordPlaceholder')}
-            placeholderTextColor={COLORS.BROWN_LIGHT}
+            placeholderTextColor={COLORS.BROWN_DARK}
             secureTextEntry
             autoComplete="new-password"
             textContentType="newPassword"
