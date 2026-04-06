@@ -8,6 +8,9 @@ type ButtonProps = {
   disabled?: boolean;
   loading?: boolean;
   variant?: ButtonVariant;
+  testID?: string;
+  /** Override the accessibility label when the visible label lacks context (e.g. "Postpone" → "Postpone Faire les courses"). Falls back to `label`. */
+  accessibilityLabel?: string;
 };
 
 const variantClassNames: Record<ButtonVariant, string> = {
@@ -26,16 +29,19 @@ export function Button({
   disabled = false,
   loading = false,
   variant = "primary",
+  testID,
+  accessibilityLabel,
 }: ButtonProps) {
   const containerClassName = variantClassNames[variant];
   const textClassName = variantTextClassNames[variant];
 
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled }}
       className={containerClassName}
       style={styles.button}
