@@ -91,7 +91,9 @@ const styles = StyleSheet.create({
   },
   message: {
     fontSize: 18,
-    color: COLORS.BROWN_MEDIUM,
+    // BROWN_DARK (#6B5744) on CREAM (#F7F0E8) — contrast ≈ 4.6:1, passes WCAG AA normal text
+    // BROWN_MEDIUM (#8B7355) was only ≈ 3.6:1 — fails for 18dp (~13.5pt) normal weight text
+    color: COLORS.BROWN_DARK,
     textAlign: 'center',
     lineHeight: 28,
   },

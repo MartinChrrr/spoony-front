@@ -179,6 +179,17 @@ export default function TaskNewScreen() {
                 accessibilityRole="adjustable"
                 accessibilityLabel={t('taskForm.spoonCost')}
                 accessibilityValue={{ min: 1, max: 5, now: spoonCost }}
+                accessibilityActions={[
+                  { name: 'increment' },
+                  { name: 'decrement' },
+                ]}
+                onAccessibilityAction={(event) => {
+                  if (event.nativeEvent.actionName === 'increment') {
+                    setSpoonCost((prev) => Math.min(5, prev + 1));
+                  } else if (event.nativeEvent.actionName === 'decrement') {
+                    setSpoonCost((prev) => Math.max(1, prev - 1));
+                  }
+                }}
                 style={styles.sliderTrack}
               >
                 <View

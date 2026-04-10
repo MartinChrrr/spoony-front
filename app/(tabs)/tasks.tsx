@@ -331,7 +331,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.ORANGE,
   },
   sortButtonText: {
-    color: COLORS.BROWN_MEDIUM,
+    // BROWN_DARK (#6B5744) on WHITE (#FFFFFF) — contrast ≈ 7.2:1, passes WCAG AA
+    // BROWN_MEDIUM (#8B7355) was only ≈ 4.0:1 — fails for 13dp normal weight text
+    color: COLORS.BROWN_DARK,
     fontSize: 13,
     fontWeight: '500',
   },
