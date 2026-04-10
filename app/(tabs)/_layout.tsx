@@ -11,16 +11,17 @@ export default function TabsLayout(): React.ReactElement {
   const { t } = useTranslation();
 
   return (
-    <View className="flex-1">
+    <View style={{ flex: 1 }}>
       {!isOnline && (
         <View
-          className="bg-brown-dark px-4 py-2"
+          testID="offline-banner"
           accessible
           accessibilityRole="alert"
-          accessibilityLabel={t('common.offlineBanner')}
+          accessibilityLabel={t('offline.bannerHint')}
+          style={{ backgroundColor: COLORS.BROWN_DARK, paddingHorizontal: 16, paddingVertical: 8 }}
         >
-          <Text className="text-white text-center text-sm">
-            {t('common.offlineBanner')}
+          <Text style={{ color: COLORS.WHITE, textAlign: 'center', fontSize: 14 }}>
+            {t('offline.banner')}
           </Text>
         </View>
       )}
