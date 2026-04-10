@@ -2,3 +2,4 @@
 
 - [Color contrast values](contrast-values.md) — Verified contrast ratios for all COLORS tokens on CREAM and WHITE backgrounds
 - [Patterns: screen reader](patterns-screen-reader.md) — Confirmed patterns for headers, live regions, radiogroup, checkbox labels, and hiding decorative elements
+- [RNTL hiding behaviour](patterns-rntl-hiding.md) — Which hiding props break RNTL testID queries; safe alternatives for decorative elements
