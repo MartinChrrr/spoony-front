@@ -103,8 +103,9 @@ describe('TaskNewScreen', () => {
     fireEvent.press(screen.getByTestId('importance-HIGH'));
 
     // Increase spoon cost (default 1 → 2 → 3)
-    fireEvent.press(screen.getByTestId('spoon-cost-increment'));
-    fireEvent.press(screen.getByTestId('spoon-cost-increment'));
+    // Buttons are hidden from a11y tree but still interactive
+    fireEvent.press(screen.getByTestId('spoon-cost-increment', { includeHiddenElements: true }));
+    fireEvent.press(screen.getByTestId('spoon-cost-increment', { includeHiddenElements: true }));
 
     // Fill due date
     fireEvent.changeText(screen.getByTestId('task-due-date-input'), '2026-04-15');

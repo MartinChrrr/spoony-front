@@ -29,7 +29,7 @@ describe('SpoonGauge', () => {
     render(<SpoonGauge spoons={8} spoonsUsed={3} />);
 
     // Assert
-    expect(screen.getByText('3 / 8')).toBeTruthy();
+    expect(screen.getByText('3 / 8', { includeHiddenElements: true })).toBeTruthy();
   });
 
   // -------------------------------------------------------------------------
@@ -40,8 +40,8 @@ describe('SpoonGauge', () => {
     // Arrange / Act
     render(<SpoonGauge spoons={10} spoonsUsed={5} />);
 
-    // Assert — verify semantic value via progressbar accessibilityValue
-    const progressbar = screen.getByRole('progressbar');
+    // Assert — verify semantic value via the progressbar's accessibilityValue
+    const progressbar = screen.getByLabelText('5 sur 10 cuillères utilisées');
     expect(progressbar.props.accessibilityValue).toEqual({ min: 0, max: 10, now: 5 });
   });
 
@@ -92,7 +92,7 @@ describe('SpoonGauge', () => {
     });
 
     // Assert — progressbar accessibilityValue reflects the new value
-    const progressbar = screen.getByRole('progressbar');
+    const progressbar = screen.getByLabelText('7 sur 10 cuillères utilisées');
     expect(progressbar.props.accessibilityValue.now).toBe(7);
   });
 });

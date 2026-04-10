@@ -69,16 +69,21 @@ function setupDefaultMocks() {
     isLoading: false,
   } as ReturnType<typeof useQuery>);
 
-  // The component calls useMutation twice per render: update then delete.
-  mockedUseMutation
-    .mockReturnValueOnce({
-      mutateAsync: mockUpdateMutateAsync,
+  // The component calls useMutation twice per render (update then delete).
+  // Using mockImplementation with a per-render-cycle counter handles re-renders
+  // gracefully (React strict mode, act batching, etc.).
+  let callIndex = 0;
+  mockedUseMutation.mockImplementation(() => {
+    const isUpdate = callIndex % 2 === 0;
+    callIndex++;
+    return {
+      mutateAsync: isUpdate ? mockUpdateMutateAsync : mockDeleteMutateAsync,
       isPending: false,
-    } as unknown as ReturnType<typeof useMutation>)
-    .mockReturnValueOnce({
-      mutateAsync: mockDeleteMutateAsync,
-      isPending: false,
-    } as unknown as ReturnType<typeof useMutation>);
+      isIdle: true,
+      isError: false,
+      isSuccess: false,
+    } as unknown as ReturnType<typeof useMutation>;
+  });
 }
 
 function renderScreen() {
