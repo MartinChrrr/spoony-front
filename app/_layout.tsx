@@ -1,4 +1,5 @@
 import '../global.css';
+import '@/i18n';
 import { useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

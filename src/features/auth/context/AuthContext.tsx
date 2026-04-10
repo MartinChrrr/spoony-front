@@ -16,8 +16,7 @@ const STORAGE_KEYS = {
 
 interface JwtPayload {
   sub: string;
-  email: string;
-  firstName: string;
+  type?: string;
   exp?: number;
 }
 
@@ -34,13 +33,10 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function decodeUser(token: string): User | null {
+function decodeUserId(token: string): string | null {
   try {
     const payload = jwtDecode<JwtPayload>(token);
-    if (!payload.sub || !payload.email || !payload.firstName) {
-      return null;
-    }
-    return { id: payload.sub, email: payload.email, firstName: payload.firstName };
+    return payload.sub ?? null;
   } catch {
     return null;
   }
@@ -60,6 +56,8 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
     await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
     await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
     await AsyncStorage.removeItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
+    await AsyncStorage.removeItem('spoony.userEmail');
+    await AsyncStorage.removeItem('spoony.userFirstName');
     await cacheManager.clear();
     setUser(null);
     setSessionExpired(false);
@@ -94,9 +92,17 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
           }
         }
 
-        const restoredUser = decodeUser(activeToken);
-        if (restoredUser !== null) {
-          setUser(restoredUser);
+        const userId = decodeUserId(activeToken);
+        if (userId !== null) {
+          // On restore, we don't have email/firstName from the JWT.
+          // Store them in AsyncStorage at login/register so we can restore them.
+          const storedEmail = await AsyncStorage.getItem('spoony.userEmail');
+          const storedFirstName = await AsyncStorage.getItem('spoony.userFirstName');
+          setUser({
+            id: userId,
+            email: storedEmail ?? '',
+            firstName: storedFirstName ?? '',
+          });
           const onboardingValue = await AsyncStorage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
           if (onboardingValue === null) {
             setHasCompletedOnboarding(false);
@@ -123,18 +129,16 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
     if (tokens === null) {
       throw new Error('AUTH_RESPONSE_EMPTY');
     }
-    const { accessToken: newAccessToken, refreshToken } = tokens;
+    const { accessToken: newAccessToken, refreshToken, userId, firstName } = tokens;
 
     await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
     await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
 
-    const loggedInUser = decodeUser(newAccessToken);
-    if (!loggedInUser) {
-      throw new Error('INVALID_TOKEN');
-    }
+    await AsyncStorage.setItem('spoony.userEmail', email);
+    await AsyncStorage.setItem('spoony.userFirstName', firstName);
     const onboardingValue = await AsyncStorage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
     setHasCompletedOnboarding(onboardingValue !== null);
-    setUser(loggedInUser);
+    setUser({ id: userId, email, firstName });
   };
 
   const register = async (
@@ -147,17 +151,15 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
     if (tokens === null) {
       throw new Error('AUTH_RESPONSE_EMPTY');
     }
-    const { accessToken: newAccessToken, refreshToken } = tokens;
+    const { accessToken: newAccessToken, refreshToken, userId } = tokens;
 
     await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
     await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
 
-    const registeredUser = decodeUser(newAccessToken);
-    if (!registeredUser) {
-      throw new Error('INVALID_TOKEN');
-    }
+    await AsyncStorage.setItem('spoony.userEmail', email);
+    await AsyncStorage.setItem('spoony.userFirstName', firstName);
     setHasCompletedOnboarding(false);
-    setUser(registeredUser);
+    setUser({ id: userId, email, firstName });
   };
 
   const completeOnboarding = async (): Promise<void> => {

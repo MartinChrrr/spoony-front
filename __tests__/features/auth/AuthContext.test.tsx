@@ -132,7 +132,12 @@ describe('AuthContext', () => {
     // Arrange
     mockedSecureStore.getItemAsync.mockResolvedValue(MOCK_ACCESS_TOKEN);
     mockedJwtDecode.mockReturnValue(MOCK_JWT_PAYLOAD as never);
-    mockedAsyncStorage.getItem.mockResolvedValue('true');
+    mockedAsyncStorage.getItem.mockImplementation((key) => {
+      if (key === 'spoony.onboardingCompleted') return Promise.resolve('true');
+      if (key === 'spoony.userEmail') return Promise.resolve('test@example.com');
+      if (key === 'spoony.userFirstName') return Promise.resolve('Jean');
+      return Promise.resolve(null);
+    });
 
     // Act
     const { result } = renderHook(() => useAuth(), { wrapper });
@@ -182,7 +187,7 @@ describe('AuthContext', () => {
     });
 
     // First call: decode the stored (expired) access token in restoreSession
-    // Subsequent calls: decode the new access token in decodeUser
+    // Second call: decode the new access token after refresh
     mockedJwtDecode
       .mockReturnValueOnce(EXPIRED_JWT_PAYLOAD as never)
       .mockReturnValue(MOCK_JWT_PAYLOAD as never);
@@ -195,6 +200,12 @@ describe('AuthContext', () => {
       },
     } as never);
 
+    mockedAsyncStorage.getItem.mockImplementation((key) => {
+      if (key === 'spoony.userEmail') return Promise.resolve('test@example.com');
+      if (key === 'spoony.userFirstName') return Promise.resolve('Jean');
+      return Promise.resolve(null);
+    });
+
     // Act
     const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -204,8 +215,8 @@ describe('AuthContext', () => {
     expect(result.current.user).not.toBeNull();
     expect(result.current.user).toEqual({
       id: MOCK_JWT_PAYLOAD.sub,
-      email: MOCK_JWT_PAYLOAD.email,
-      firstName: MOCK_JWT_PAYLOAD.firstName,
+      email: 'test@example.com',
+      firstName: 'Jean',
     });
     expect(mockedSecureStore.setItemAsync).toHaveBeenCalledWith('accessToken', NEW_ACCESS_TOKEN);
     expect(mockedSecureStore.setItemAsync).toHaveBeenCalledWith('refreshToken', NEW_REFRESH_TOKEN);

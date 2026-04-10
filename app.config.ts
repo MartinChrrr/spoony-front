@@ -1,4 +1,7 @@
 import { ExpoConfig, ConfigContext } from "expo/config";
+import * as dotenv from "dotenv";
+
+dotenv.config();
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   name: "Spoony",
