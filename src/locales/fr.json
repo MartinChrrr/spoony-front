@@ -122,6 +122,50 @@
     "newTask": "Nouvelle tâche",
     "errorLoading": "Erreur lors du chargement"
   },
+  "calendar": {
+    "title": "Calendrier",
+    "monthHeader": "Mois en cours",
+    "prevMonth": "Mois précédent",
+    "nextMonth": "Mois suivant",
+    "dayWithActivity": "{{date}}, {{count}} activité(s)",
+    "noLogsForDay": "Aucune activité ce jour",
+    "spoonsUsed": "{{used}} / {{total}} cuillères",
+    "tasksCount": "{{count}} tâche(s)",
+    "spoonDistribution": "Répartition des cuillères",
+    "completed": "Terminées",
+    "planned": "Planifiées"
+  },
+  "templates": {
+    "title": "Modèles de tâches",
+    "subtitle": "Sélectionnez des tâches à ajouter",
+    "submitSelection": "Ajouter la sélection",
+    "noTemplates": "Aucun modèle disponible",
+    "loading": "Chargement des modèles",
+    "error": "Erreur lors du chargement des modèles",
+    "successMessage": "Tâches ajoutées avec succès",
+    "selectHint": "Appuyez pour sélectionner cette tâche modèle"
+  },
+  "profile": {
+    "title": "Mon profil",
+    "firstName": "Prénom",
+    "email": "Email",
+    "privacyPolicy": "Politique de confidentialité",
+    "privacyPolicyHint": "Ouvre la politique de confidentialité",
+    "deleteAccount": "Supprimer mon compte",
+    "deleteAccountHint": "Ouvre la confirmation de suppression de compte",
+    "deleteConfirmTitle": "Supprimer votre compte ?",
+    "deleteConfirmMessage": "Cette action est irréversible. Tapez SUPPRIMER pour confirmer.",
+    "deleteConfirmPlaceholder": "SUPPRIMER",
+    "deleteConfirmButton": "Confirmer la suppression",
+    "deleteConfirmButtonHint": "Confirme la suppression définitive du compte",
+    "deleteConfirmInputLabel": "Confirmation de suppression",
+    "cancelButton": "Annuler",
+    "deleteError": "Erreur lors de la suppression du compte"
+  },
+  "offline": {
+    "banner": "Mode hors ligne",
+    "bannerHint": "Vous êtes hors ligne. Certaines fonctionnalités sont indisponibles."
+  },
   "taskForm": {
     "createTitle": "Nouvelle tâche",
     "newTaskTitle": "Nouvelle tâche",

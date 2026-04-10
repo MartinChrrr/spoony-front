@@ -122,6 +122,50 @@
     "newTask": "New task",
     "errorLoading": "Error loading data"
   },
+  "calendar": {
+    "title": "Calendar",
+    "monthHeader": "Current month",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "dayWithActivity": "{{date}}, {{count}} activity(ies)",
+    "noLogsForDay": "No activity this day",
+    "spoonsUsed": "{{used}} / {{total}} spoons",
+    "tasksCount": "{{count}} task(s)",
+    "spoonDistribution": "Spoon distribution",
+    "completed": "Completed",
+    "planned": "Planned"
+  },
+  "templates": {
+    "title": "Task templates",
+    "subtitle": "Select tasks to add",
+    "submitSelection": "Add selection",
+    "noTemplates": "No templates available",
+    "loading": "Loading templates",
+    "error": "Error loading templates",
+    "successMessage": "Tasks added successfully",
+    "selectHint": "Tap to select this template task"
+  },
+  "profile": {
+    "title": "My profile",
+    "firstName": "First name",
+    "email": "Email",
+    "privacyPolicy": "Privacy policy",
+    "privacyPolicyHint": "Opens the privacy policy",
+    "deleteAccount": "Delete my account",
+    "deleteAccountHint": "Opens account deletion confirmation",
+    "deleteConfirmTitle": "Delete your account?",
+    "deleteConfirmMessage": "This action is irreversible. Type DELETE to confirm.",
+    "deleteConfirmPlaceholder": "DELETE",
+    "deleteConfirmButton": "Confirm deletion",
+    "deleteConfirmButtonHint": "Confirms permanent account deletion",
+    "deleteConfirmInputLabel": "Deletion confirmation",
+    "cancelButton": "Cancel",
+    "deleteError": "Error deleting account"
+  },
+  "offline": {
+    "banner": "Offline mode",
+    "bannerHint": "You are offline. Some features are unavailable."
+  },
   "taskForm": {
     "createTitle": "New task",
     "newTaskTitle": "New task",
