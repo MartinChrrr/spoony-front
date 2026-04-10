@@ -70,16 +70,15 @@ function setupDefaultMocks() {
   } as ReturnType<typeof useQuery>);
 
   // The component calls useMutation twice per render: update then delete.
-  // Use mockImplementation with a closure to alternate per-render-cycle.
-  let callCount = 0;
-  mockedUseMutation.mockImplementation(() => {
-    const isUpdate = callCount % 2 === 0;
-    callCount++;
-    return {
-      mutateAsync: isUpdate ? mockUpdateMutateAsync : mockDeleteMutateAsync,
+  mockedUseMutation
+    .mockReturnValueOnce({
+      mutateAsync: mockUpdateMutateAsync,
       isPending: false,
-    } as unknown as ReturnType<typeof useMutation>;
-  });
+    } as unknown as ReturnType<typeof useMutation>)
+    .mockReturnValueOnce({
+      mutateAsync: mockDeleteMutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof useMutation>);
 }
 
 function renderScreen() {
@@ -122,6 +121,16 @@ describe('TaskDetailScreen', () => {
       expect(
         categoryInput.props.value ?? categoryInput.props.defaultValue,
       ).toBe('quotidien');
+
+      // Spoon cost slider
+      const spoonSlider = screen.getByTestId('task-spoon-cost-slider');
+      expect(spoonSlider.props.accessibilityValue.now).toBe(2);
+
+      // Due date field
+      const dueDateInput = screen.getByTestId('task-due-date-input');
+      expect(
+        dueDateInput.props.value ?? dueDateInput.props.defaultValue,
+      ).toBe('2026-04-10');
 
       // Notes field
       const notesInput = screen.getByTestId('task-notes-input');

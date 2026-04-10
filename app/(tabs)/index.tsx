@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth/hooks/useAuth';
@@ -19,6 +20,7 @@ interface UpdateStatusArgs {
 
 export default function HomeScreen(): React.ReactElement {
   const { t } = useTranslation();
+  const router = useRouter();
   const { user } = useAuth();
 
   const { data: energy } = useQuery<EnergyResponse | null>({
@@ -64,7 +66,6 @@ export default function HomeScreen(): React.ReactElement {
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
-      accessibilityRole="list"
     >
       <Text style={styles.greeting} accessibilityRole="header">
         {t('home.greeting', { name: user?.firstName })}
@@ -77,6 +78,17 @@ export default function HomeScreen(): React.ReactElement {
           <SpoonGauge spoons={energy.spoons} spoonsUsed={energy.spoonsUsed} />
         </View>
       )}
+
+      <Pressable
+        testID="reevaluate-button"
+        onPress={() => router.push('/checkin/step2')}
+        accessibilityRole="button"
+        accessibilityLabel={t('home.reevaluate')}
+        accessibilityHint={t('home.reevaluateHint')}
+        style={styles.reevaluateButton}
+      >
+        <Text style={styles.reevaluateText}>{t('home.reevaluate')}</Text>
+      </Pressable>
 
       <View style={styles.taskSection}>
         <Text style={styles.sectionTitle} accessibilityRole="header">
@@ -157,6 +169,21 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.WHITE,
     borderRadius: 12,
     padding: 16,
+  },
+  reevaluateButton: {
+    minHeight: 44,
+    borderWidth: 2,
+    borderColor: COLORS.BROWN_LIGHT,
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+  },
+  reevaluateText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.BROWN_DARK,
   },
   taskSection: {
     gap: 12,

@@ -102,6 +102,13 @@ describe('TaskNewScreen', () => {
     // Select importance HIGH
     fireEvent.press(screen.getByTestId('importance-HIGH'));
 
+    // Increase spoon cost (default 1 → 2 → 3)
+    fireEvent.press(screen.getByTestId('spoon-cost-increment'));
+    fireEvent.press(screen.getByTestId('spoon-cost-increment'));
+
+    // Fill due date
+    fireEvent.changeText(screen.getByTestId('task-due-date-input'), '2026-04-15');
+
     // Save
     fireEvent.press(screen.getByTestId('save-task-button'));
 
@@ -112,6 +119,8 @@ describe('TaskNewScreen', () => {
           name: 'Tâche complète',
           category: 'santé',
           importance: 'HIGH',
+          spoonCost: 3,
+          dueDate: '2026-04-15',
         }),
       );
     });

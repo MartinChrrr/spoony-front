@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, act } from '@testing-library/react-native';
 import SpoonGauge from '@/components/shared/SpoonGauge';
 
 // ---------------------------------------------------------------------------
@@ -7,7 +7,12 @@ import SpoonGauge from '@/components/shared/SpoonGauge';
 // ---------------------------------------------------------------------------
 
 jest.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, params?: Record<string, unknown>) => {
+      if (params?.used !== undefined) return `${params.used} sur ${params.total} cuillères utilisées`;
+      return key;
+    },
+  }),
 }));
 
 // ---------------------------------------------------------------------------
@@ -35,11 +40,9 @@ describe('SpoonGauge', () => {
     // Arrange / Act
     render(<SpoonGauge spoons={10} spoonsUsed={5} />);
 
-    // Assert
-    const gaugeFill = screen.getByTestId('gauge-fill');
-    expect(gaugeFill.props.style).toEqual(
-      expect.objectContaining({ width: '50%' }),
-    );
+    // Assert — verify semantic value via progressbar accessibilityValue
+    const progressbar = screen.getByRole('progressbar');
+    expect(progressbar.props.accessibilityValue).toEqual({ min: 0, max: 10, now: 5 });
   });
 
   // -------------------------------------------------------------------------
@@ -73,5 +76,23 @@ describe('SpoonGauge', () => {
 
     // Assert
     expect(screen.queryAllByTestId(/^spoon-icon/)).toHaveLength(0);
+  });
+
+  // -------------------------------------------------------------------------
+  // 5. Gauge animates when spoons change
+  // -------------------------------------------------------------------------
+
+  it('should_Animate_When_SpoonsChange', async () => {
+    // Arrange
+    const { rerender } = render(<SpoonGauge spoons={10} spoonsUsed={2} />);
+
+    // Act — change spoonsUsed
+    await act(async () => {
+      rerender(<SpoonGauge spoons={10} spoonsUsed={7} />);
+    });
+
+    // Assert — progressbar accessibilityValue reflects the new value
+    const progressbar = screen.getByRole('progressbar');
+    expect(progressbar.props.accessibilityValue.now).toBe(7);
   });
 });

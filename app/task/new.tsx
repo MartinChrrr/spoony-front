@@ -17,7 +17,8 @@ export default function TaskNewScreen() {
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [importance, setImportance] = useState<Importance | undefined>(undefined);
-  const [spoonCost, setSpoonCost] = useState('');
+  const [spoonCost, setSpoonCost] = useState(1);
+  const [dueDate, setDueDate] = useState('');
   const [notes, setNotes] = useState('');
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [nameError, setNameError] = useState('');
@@ -47,12 +48,14 @@ export default function TaskNewScreen() {
       category?: string;
       importance?: Importance;
       spoonCost?: number;
+      dueDate?: string;
       notes?: string;
     } = { name: name.trim() };
 
     if (category.trim()) payload.category = category.trim();
     if (importance) payload.importance = importance;
-    if (spoonCost.trim()) payload.spoonCost = Number(spoonCost);
+    if (spoonCost > 0) payload.spoonCost = spoonCost;
+    if (dueDate.trim()) payload.dueDate = dueDate.trim();
     if (notes.trim()) payload.notes = notes.trim();
 
     try {
@@ -157,15 +160,57 @@ export default function TaskNewScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>{t('taskForm.spoonCost')}</Text>
+            <Text style={styles.label}>
+              {t('taskForm.spoonCost')} : {spoonCost}
+            </Text>
+            <View style={styles.sliderRow}>
+              <Pressable
+                testID="spoon-cost-decrement"
+                onPress={() => setSpoonCost((prev) => Math.max(1, prev - 1))}
+                importantForAccessibility="no-hide-descendants"
+                accessibilityElementsHidden
+                style={styles.sliderButton}
+              >
+                <Text style={styles.sliderButtonText}>-</Text>
+              </Pressable>
+              <View
+                testID="task-spoon-cost-slider"
+                accessible
+                accessibilityRole="adjustable"
+                accessibilityLabel={t('taskForm.spoonCost')}
+                accessibilityValue={{ min: 1, max: 5, now: spoonCost }}
+                style={styles.sliderTrack}
+              >
+                <View
+                  style={[
+                    styles.sliderFill,
+                    { width: `${((spoonCost - 1) / 4) * 100}%` },
+                  ]}
+                />
+              </View>
+              <Pressable
+                testID="spoon-cost-increment"
+                onPress={() => setSpoonCost((prev) => Math.min(5, prev + 1))}
+                importantForAccessibility="no-hide-descendants"
+                accessibilityElementsHidden
+                style={styles.sliderButton}
+              >
+                <Text style={styles.sliderButtonText}>+</Text>
+              </Pressable>
+            </View>
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>{t('taskForm.dueDateLabel')}</Text>
             <TextInput
-              testID="task-spoon-cost-input"
-              value={spoonCost}
-              onChangeText={setSpoonCost}
-              accessibilityLabel={t('taskForm.spoonCost')}
+              testID="task-due-date-input"
+              value={dueDate}
+              onChangeText={setDueDate}
+              accessibilityLabel={t('taskForm.dueDateLabel')}
+              accessibilityHint={t('taskForm.dueDateHint')}
               style={styles.input}
-              keyboardType="numeric"
-              placeholder="1"
+              placeholder={t('taskForm.dueDatePlaceholder')}
+              keyboardType="numbers-and-punctuation"
             />
           </View>
 
@@ -280,5 +325,36 @@ const styles = StyleSheet.create({
   importanceTextSelected: {
     color: COLORS.BROWN_DARK,
     fontWeight: '700',
+  },
+  sliderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  sliderButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.BROWN_LIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sliderButtonText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.WHITE,
+    lineHeight: 24,
+  },
+  sliderTrack: {
+    flex: 1,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: COLORS.BROWN_LIGHT,
+    overflow: 'hidden',
+  },
+  sliderFill: {
+    height: '100%',
+    borderRadius: 6,
+    backgroundColor: COLORS.ORANGE,
   },
 });

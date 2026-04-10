@@ -1,4 +1,6 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { View, Text, Animated, AccessibilityInfo, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { COLORS } from '@/constants/colors';
 
 interface SpoonGaugeProps {
@@ -7,7 +9,32 @@ interface SpoonGaugeProps {
 }
 
 export default function SpoonGauge({ spoons, spoonsUsed }: SpoonGaugeProps) {
+  const { t } = useTranslation();
   const percentage = spoons > 0 ? Math.min(100, Math.round((spoonsUsed / spoons) * 100)) : 0;
+
+  const animatedWidth = useRef(new Animated.Value(percentage)).current;
+
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then((reduceMotion) => {
+      if (reduceMotion) {
+        animatedWidth.setValue(percentage);
+      } else {
+        Animated.timing(animatedWidth, {
+          toValue: percentage,
+          duration: 400,
+          useNativeDriver: false,
+        }).start();
+      }
+    });
+  }, [percentage, animatedWidth]);
+
+  const animatedStyle = {
+    ...styles.gaugeFill,
+    width: animatedWidth.interpolate({
+      inputRange: [0, 100],
+      outputRange: ['0%', '100%'],
+    }),
+  };
 
   return (
     <View style={styles.container}>
@@ -17,6 +44,7 @@ export default function SpoonGauge({ spoons, spoonsUsed }: SpoonGaugeProps) {
         style={styles.countText}
         accessible={false}
         importantForAccessibility="no"
+        accessibilityElementsHidden
       >
         {spoonsUsed} / {spoons}
       </Text>
@@ -26,12 +54,12 @@ export default function SpoonGauge({ spoons, spoonsUsed }: SpoonGaugeProps) {
         style={styles.gaugeTrack}
         accessible
         accessibilityRole="progressbar"
-        accessibilityLabel={`${spoonsUsed} spoons used out of ${spoons}`}
+        accessibilityLabel={t('checkin.spoonsUsedLabel', { used: spoonsUsed, total: spoons })}
         accessibilityValue={{ min: 0, max: spoons, now: spoonsUsed }}
       >
-        <View
+        <Animated.View
           testID="gauge-fill"
-          style={{ ...styles.gaugeFill, width: `${percentage}%` }}
+          style={animatedStyle}
           accessible={false}
           importantForAccessibility="no"
         />

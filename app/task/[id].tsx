@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, TextInput, ScrollView, Pressable, Modal, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -18,7 +18,7 @@ export default function TaskDetailScreen() {
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [importance, setImportance] = useState<Importance | undefined>(undefined);
-  const [spoonCost, setSpoonCost] = useState('');
+  const [spoonCost, setSpoonCost] = useState(1);
   const [notes, setNotes] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -56,7 +56,7 @@ export default function TaskDetailScreen() {
       setName(task.name ?? '');
       setCategory(task.category ?? '');
       setImportance(task.importance ?? undefined);
-      setSpoonCost(task.spoonCost != null ? String(task.spoonCost) : '');
+      setSpoonCost(task.spoonCost ?? 1);
       setNotes(task.notes ?? '');
       setDueDate(task.dueDate ?? '');
     }
@@ -84,7 +84,7 @@ export default function TaskDetailScreen() {
     if (name.trim()) payload.name = name.trim();
     if (category.trim()) payload.category = category.trim();
     if (importance) payload.importance = importance;
-    if (spoonCost.trim()) payload.spoonCost = Number(spoonCost);
+    if (spoonCost > 0) payload.spoonCost = spoonCost;
     if (notes.trim()) payload.notes = notes.trim();
     if (dueDate.trim()) payload.dueDate = dueDate.trim();
 
@@ -194,15 +194,57 @@ export default function TaskDetailScreen() {
       </View>
 
       <View style={styles.field}>
-        <Text style={styles.label}>{t('taskForm.spoonCost')}</Text>
+        <Text style={styles.label}>
+          {t('taskForm.spoonCost')} : {spoonCost}
+        </Text>
+        <View style={styles.sliderRow}>
+          <Pressable
+            testID="spoon-cost-decrement"
+            onPress={() => setSpoonCost((prev) => Math.max(1, prev - 1))}
+            importantForAccessibility="no-hide-descendants"
+            accessibilityElementsHidden
+            style={styles.sliderButton}
+          >
+            <Text style={styles.sliderButtonText}>-</Text>
+          </Pressable>
+          <View
+            testID="task-spoon-cost-slider"
+            accessible
+            accessibilityRole="adjustable"
+            accessibilityLabel={t('taskForm.spoonCost')}
+            accessibilityValue={{ min: 1, max: 5, now: spoonCost }}
+            style={styles.sliderTrack}
+          >
+            <View
+              style={[
+                styles.sliderFill,
+                { width: `${((spoonCost - 1) / 4) * 100}%` },
+              ]}
+            />
+          </View>
+          <Pressable
+            testID="spoon-cost-increment"
+            onPress={() => setSpoonCost((prev) => Math.min(5, prev + 1))}
+            importantForAccessibility="no-hide-descendants"
+            accessibilityElementsHidden
+            style={styles.sliderButton}
+          >
+            <Text style={styles.sliderButtonText}>+</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={styles.field}>
+        <Text style={styles.label}>{t('taskForm.dueDateLabel')}</Text>
         <TextInput
-          testID="task-spoon-cost-input"
-          value={spoonCost}
-          onChangeText={setSpoonCost}
-          accessibilityLabel={t('taskForm.spoonCost')}
+          testID="task-due-date-input"
+          value={dueDate}
+          onChangeText={setDueDate}
+          accessibilityLabel={t('taskForm.dueDateLabel')}
+          accessibilityHint={t('taskForm.dueDateHint')}
           style={styles.input}
-          keyboardType="numeric"
-          placeholder="1"
+          placeholder={t('taskForm.dueDatePlaceholder')}
+          keyboardType="numbers-and-punctuation"
         />
       </View>
 
@@ -243,44 +285,49 @@ export default function TaskDetailScreen() {
         <Text style={styles.deleteText}>{t('taskForm.delete')}</Text>
       </Pressable>
 
-      {showDeleteConfirm && (
-        <View style={styles.confirmContainer}>
-          {/* accessibilityLiveRegion="assertive" announces this destructive
-              confirmation dialog immediately when it appears on screen */}
-          <Text
-            style={styles.confirmText}
-            accessibilityRole="alert"
-            accessibilityLiveRegion="assertive"
-          >
-            {t('taskForm.deleteConfirm')}
-          </Text>
-          {deleteError ? (
-            <Text style={styles.errorText} accessibilityRole="alert">
-              {deleteError}
+      <Modal
+        visible={showDeleteConfirm}
+        transparent
+        animationType="fade"
+        accessibilityViewIsModal
+        onRequestClose={() => setShowDeleteConfirm(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmContainer}>
+            <Text
+              style={styles.confirmText}
+              accessibilityRole="header"
+            >
+              {t('taskForm.deleteConfirm')}
             </Text>
-          ) : null}
-          <View style={styles.confirmActions}>
-            <Pressable
-              testID="confirm-delete-button"
-              onPress={handleConfirmDelete}
-              accessibilityRole="button"
-              accessibilityLabel={t('taskForm.confirmDelete')}
-              style={[styles.confirmButton, styles.confirmButtonDanger]}
-            >
-              <Text style={styles.confirmButtonText}>{t('taskForm.confirmDelete')}</Text>
-            </Pressable>
-            <Pressable
-              testID="cancel-delete-button"
-              onPress={() => setShowDeleteConfirm(false)}
-              accessibilityRole="button"
-              accessibilityLabel={t('common.cancel')}
-              style={[styles.confirmButton, styles.confirmButtonCancel]}
-            >
-              <Text style={styles.confirmButtonCancelText}>{t('common.cancel')}</Text>
-            </Pressable>
+            {deleteError ? (
+              <Text style={styles.errorText} accessibilityRole="alert">
+                {deleteError}
+              </Text>
+            ) : null}
+            <View style={styles.confirmActions}>
+              <Pressable
+                testID="confirm-delete-button"
+                onPress={handleConfirmDelete}
+                accessibilityRole="button"
+                accessibilityLabel={t('taskForm.confirmDelete')}
+                style={[styles.confirmButton, styles.confirmButtonDanger]}
+              >
+                <Text style={styles.confirmButtonText}>{t('taskForm.confirmDelete')}</Text>
+              </Pressable>
+              <Pressable
+                testID="cancel-delete-button"
+                onPress={() => setShowDeleteConfirm(false)}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.cancel')}
+                style={[styles.confirmButton, styles.confirmButtonCancel]}
+              >
+                <Text style={styles.confirmButtonCancelText}>{t('common.cancel')}</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
-      )}
+      </Modal>
     </ScrollView>
   );
 }
@@ -358,6 +405,37 @@ const styles = StyleSheet.create({
     color: COLORS.BROWN_DARK,
     fontWeight: '700',
   },
+  sliderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  sliderButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.BROWN_LIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sliderButtonText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.WHITE,
+    lineHeight: 24,
+  },
+  sliderTrack: {
+    flex: 1,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: COLORS.BROWN_LIGHT,
+    overflow: 'hidden',
+  },
+  sliderFill: {
+    height: '100%',
+    borderRadius: 6,
+    backgroundColor: COLORS.ORANGE,
+  },
   deleteButton: {
     minHeight: 44,
     alignItems: 'center',
@@ -369,13 +447,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
   confirmContainer: {
-    marginTop: 16,
+    width: '100%',
+    maxWidth: 400,
     padding: 16,
     backgroundColor: COLORS.WHITE,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.BROWN_LIGHT,
+    borderRadius: 12,
   },
   confirmText: {
     fontSize: 14,

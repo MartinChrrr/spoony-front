@@ -10,9 +10,10 @@ import { TaskResponse } from '@/data/api/endpoints/tasks';
 // ---------------------------------------------------------------------------
 
 const mockReplace = jest.fn();
+const mockPush = jest.fn();
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ replace: mockReplace }),
+  useRouter: () => ({ replace: mockReplace, push: mockPush }),
   Link: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
@@ -253,5 +254,21 @@ describe('HomeScreen', () => {
     expect(mockUpdateStatusMutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'COMPLETED' }),
     );
+  });
+
+  // -------------------------------------------------------------------------
+  // 6. Reevaluate button navigates to check-in step 2
+  // -------------------------------------------------------------------------
+
+  it('should_NavigateToCheckinStep2_When_ReevaluatePressed', () => {
+    // Arrange
+    setupDefaultMocks();
+    renderScreen();
+
+    // Act
+    fireEvent.press(screen.getByTestId('reevaluate-button'));
+
+    // Assert
+    expect(mockPush).toHaveBeenCalledWith('/checkin/step2');
   });
 });
