@@ -10,30 +10,27 @@ interface SpoonGaugeProps {
 
 export default function SpoonGauge({ spoons, spoonsUsed }: SpoonGaugeProps) {
   const { t } = useTranslation();
-  const percentage = spoons > 0 ? Math.min(100, Math.round((spoonsUsed / spoons) * 100)) : 0;
+  const fraction = spoons > 0 ? Math.min(1, spoonsUsed / spoons) : 0;
 
-  const animatedWidth = useRef(new Animated.Value(percentage)).current;
+  const animatedScale = useRef(new Animated.Value(fraction)).current;
 
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then((reduceMotion) => {
       if (reduceMotion) {
-        animatedWidth.setValue(percentage);
+        animatedScale.setValue(fraction);
       } else {
-        Animated.timing(animatedWidth, {
-          toValue: percentage,
+        Animated.timing(animatedScale, {
+          toValue: fraction,
           duration: 400,
-          useNativeDriver: false,
+          // Animate transform (GPU/UI thread) instead of width (layout each frame).
+          useNativeDriver: true,
         }).start();
       }
     });
-  }, [percentage, animatedWidth]);
+  }, [fraction, animatedScale]);
 
   const animatedStyle = {
-    ...styles.gaugeFill,
-    width: animatedWidth.interpolate({
-      inputRange: [0, 100],
-      outputRange: ['0%', '100%'],
-    }),
+    transform: [{ scaleX: animatedScale }],
   };
 
   return (
@@ -59,7 +56,7 @@ export default function SpoonGauge({ spoons, spoonsUsed }: SpoonGaugeProps) {
       >
         <Animated.View
           testID="gauge-fill"
-          style={animatedStyle}
+          style={[styles.gaugeFill, animatedStyle]}
           accessible={false}
           importantForAccessibility="no"
         />
@@ -103,9 +100,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   gaugeFill: {
+    width: '100%',
     height: '100%',
     borderRadius: 6,
     backgroundColor: COLORS.ORANGE,
+    // Grow from the left edge as scaleX animates 0 → 1.
+    transformOrigin: 'left',
   },
   spoonsRow: {
     flexDirection: 'row',

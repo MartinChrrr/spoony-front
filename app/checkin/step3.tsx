@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, FlatList, Pressable, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -90,15 +90,21 @@ export default function CheckinStep3() {
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {isLoading ? (
-          <Text style={styles.loadingText}>{t('common.loading')}</Text>
-        ) : isError ? (
-          <Text style={styles.errorText} accessibilityRole="alert">
-            {t('common.error')}
-          </Text>
-        ) : (
-          suggestions.map((suggestion: SuggestionResponse) => {
+      {isLoading ? (
+        <Text style={styles.loadingText}>{t('common.loading')}</Text>
+      ) : isError ? (
+        <Text style={styles.errorText} accessibilityRole="alert">
+          {t('common.error')}
+        </Text>
+      ) : (
+        <FlatList
+          data={suggestions}
+          keyExtractor={(suggestion: SuggestionResponse) => suggestion.userTaskId}
+          // Cells read checkedIds; without extraData they won't re-render on toggle.
+          extraData={checkedIds}
+          style={styles.list}
+          contentContainerStyle={styles.scrollContent}
+          renderItem={({ item: suggestion }: { item: SuggestionResponse }) => {
             const isChecked = checkedIds.has(suggestion.userTaskId);
             // Build a rich label so the checkbox conveys all info in one focus stop:
             // "Faire les courses — 3 spoons — exceeds budget" (or without the last part)
@@ -113,7 +119,6 @@ export default function CheckinStep3() {
                 });
             return (
               <View
-                key={suggestion.userTaskId}
                 testID={`task-item-${suggestion.userTaskId}`}
                 style={[
                   styles.taskRow,
@@ -169,9 +174,9 @@ export default function CheckinStep3() {
                 )}
               </View>
             );
-          })
-        )}
-      </ScrollView>
+          }}
+        />
+      )}
 
       <View style={styles.footer}>
         <Button
@@ -209,6 +214,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: COLORS.BROWN_DARK,
+  },
+  list: {
+    flex: 1,
   },
   scrollContent: {
     padding: 16,

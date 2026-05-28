@@ -3,6 +3,7 @@ import {
   View,
   Text,
   ScrollView,
+  FlatList,
   Pressable,
   StyleSheet,
   ActivityIndicator,
@@ -206,15 +207,15 @@ export default function TasksScreen(): React.ReactElement {
       {/* ------------------------------------------------------------------ */}
       {/* Task list                                                            */}
       {/* ------------------------------------------------------------------ */}
-      <ScrollView
+      <FlatList
+        data={filteredAndSortedTasks}
+        keyExtractor={(task) => task.id}
         style={styles.list}
         contentContainerStyle={styles.listContent}
         accessibilityRole="list"
         accessibilityLabel={t('tasks.list')}
-      >
-        {filteredAndSortedTasks.map((task) => (
+        renderItem={({ item: task }) => (
           <Pressable
-            key={task.id}
             testID="task-item"
             onPress={() => router.push(`/task/${task.id}`)}
             style={styles.taskItem}
@@ -238,8 +239,8 @@ export default function TasksScreen(): React.ReactElement {
               )}
             </View>
           </Pressable>
-        ))}
-      </ScrollView>
+        )}
+      />
 
       {/* ------------------------------------------------------------------ */}
       {/* FAB                                                                  */}
