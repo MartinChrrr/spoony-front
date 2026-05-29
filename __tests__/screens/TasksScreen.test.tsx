@@ -209,7 +209,7 @@ describe('TasksScreen', () => {
   // 5. FAB navigates to the new task screen
   // -------------------------------------------------------------------------
 
-  it('should_NavigateToNew_When_FABPressed', async () => {
+  it('should_NavigateToChooseTemplate_When_FABPressed', async () => {
     // Arrange
     renderScreen();
 
@@ -220,7 +220,7 @@ describe('TasksScreen', () => {
     // Act
     fireEvent.press(screen.getByTestId('fab-new-task'));
 
-    // Assert
-    expect(mockPush).toHaveBeenCalledWith('/task/new');
+    // Assert — FAB opens the "Choisir un modèle" entry screen
+    expect(mockPush).toHaveBeenCalledWith('/task/choose');
   });
 });

@@ -120,7 +120,41 @@
     "spoonCost": "{{count}} spoon(s)",
     "dueDate": "Due: {{date}}",
     "newTask": "New task",
-    "errorLoading": "Error loading data"
+    "errorLoading": "Error loading data",
+    "hygiene": {
+      "shower": "Take a shower",
+      "brush_teeth": "Brush teeth",
+      "hair": "Do hair"
+    },
+    "household": {
+      "groceries": "Grocery shopping",
+      "laundry": "Do laundry",
+      "dishes": "Do the dishes",
+      "vacuum": "Vacuum"
+    },
+    "food": {
+      "cook_meal": "Cook a meal",
+      "prepare_snack": "Prepare a snack"
+    },
+    "admin": {
+      "bills": "Pay bills",
+      "emails": "Handle emails",
+      "appointment": "Book an appointment"
+    },
+    "social": {
+      "call_friend": "Call a friend",
+      "text_family": "Text family"
+    },
+    "health": {
+      "take_meds": "Take medication",
+      "exercise": "Exercise",
+      "rest": "Rest"
+    },
+    "leisure": {
+      "read": "Read",
+      "music": "Listen to music",
+      "hobby": "Creative hobby"
+    }
   },
   "calendar": {
     "title": "Calendar",
@@ -133,7 +167,9 @@
     "tasksCount": "{{count}} task(s)",
     "spoonDistribution": "Spoon distribution",
     "completed": "Completed",
-    "planned": "Planned"
+    "planned": "Planned",
+    "weekdays": ["M", "T", "W", "T", "F", "S", "S"],
+    "weekdayLabels": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
   },
   "templates": {
     "title": "Task templates",
@@ -143,7 +179,12 @@
     "loading": "Loading templates",
     "error": "Error loading templates",
     "successMessage": "Tasks added successfully",
-    "selectHint": "Tap to select this template task"
+    "selectHint": "Tap to select this template task",
+    "chooseTitle": "Choose a template",
+    "chooseSubtitle": "Start from a ready-made task or create your own",
+    "createManually": "Create manually",
+    "createManuallyHint": "Opens a blank form to create your own task",
+    "templateHint": "Opens the form pre-filled from this template"
   },
   "profile": {
     "title": "My profile",
@@ -198,6 +239,9 @@
     "notesPlaceholder": "Additional notes",
     "saveButton": "Save",
     "save": "Save",
+    "add": "Add",
+    "fromTemplate": "From template",
+    "added": "Task added",
     "deleteButton": "Delete task",
     "delete": "Delete task",
     "deleteConfirmTitle": "Delete this task?",

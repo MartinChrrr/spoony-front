@@ -1,26 +1,56 @@
 import { useState } from 'react';
 import { View, Text, TextInput, ScrollView, Pressable, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { taskRepository } from '@/data/repositories/taskRepository';
 import { Button } from '@/components/ui/button-custom';
+import { useToast } from '@/components/ui/Toast';
 import { COLORS } from '@/constants/colors';
 import { Importance } from '@/data/api/types';
 
 const IMPORTANCE_OPTIONS: Importance[] = ['LOW', 'MEDIUM', 'HIGH'];
 
+/** Reads a single-value search param (expo-router can hand back string[]). */
+function firstParam(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function isImportance(value: string | undefined): value is Importance {
+  return value === 'LOW' || value === 'MEDIUM' || value === 'HIGH';
+}
+
 export default function TaskNewScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const toast = useToast();
 
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState('');
-  const [importance, setImportance] = useState<Importance | undefined>(undefined);
-  const [spoonCost, setSpoonCost] = useState(1);
+  // When launched from "Choisir un modèle", the screen is pre-filled from a
+  // prefab base task and the user edits it before validating.
+  const params = useLocalSearchParams<{
+    baseTaskId?: string | string[];
+    templateKey?: string | string[];
+    spoonCost?: string | string[];
+    importance?: string | string[];
+    category?: string | string[];
+  }>();
+  const baseTaskId = firstParam(params.baseTaskId);
+  const templateKey = firstParam(params.templateKey);
+  const fromTemplate = baseTaskId !== undefined && baseTaskId.length > 0;
+  const templateImportance = firstParam(params.importance);
+  const templateSpoonCost = Number(firstParam(params.spoonCost));
+
+  const [name, setName] = useState(templateKey ? t(templateKey) : '');
+  const [category, setCategory] = useState(firstParam(params.category) ?? '');
+  const [importance, setImportance] = useState<Importance | undefined>(
+    isImportance(templateImportance) ? templateImportance : undefined,
+  );
+  const [spoonCost, setSpoonCost] = useState(
+    Number.isFinite(templateSpoonCost) && templateSpoonCost > 0 ? templateSpoonCost : 1,
+  );
   const [dueDate, setDueDate] = useState('');
   const [notes, setNotes] = useState('');
-  const [showMoreOptions, setShowMoreOptions] = useState(false);
+  const [showMoreOptions, setShowMoreOptions] = useState(fromTemplate);
   const [nameError, setNameError] = useState('');
   const [submitError, setSubmitError] = useState('');
 
@@ -60,7 +90,12 @@ export default function TaskNewScreen() {
 
     try {
       await mutateAsync(payload);
-      router.back();
+      toast.show(t('taskForm.added'));
+      // Pop the whole add-task stack (choose → form) and land on the Tasks tab.
+      if (router.canDismiss?.()) {
+        router.dismissAll();
+      }
+      router.navigate('/(tabs)/tasks');
     } catch {
       setSubmitError(t('taskForm.errorSaving'));
     }
@@ -72,6 +107,12 @@ export default function TaskNewScreen() {
       <Text style={styles.screenTitle} accessibilityRole="header">
         {t('taskForm.newTaskTitle')}
       </Text>
+
+      {fromTemplate && (
+        <View testID="from-template-badge" style={styles.templateBadge} accessibilityRole="text">
+          <Text style={styles.templateBadgeText}>{t('taskForm.fromTemplate')}</Text>
+        </View>
+      )}
 
       <View style={styles.field}>
         <Text style={styles.label}>
@@ -248,7 +289,7 @@ export default function TaskNewScreen() {
 
       <Button
         testID="save-task-button"
-        label={t('taskForm.save')}
+        label={t('taskForm.add')}
         onPress={handleSave}
         loading={isPending}
         disabled={isPending}
@@ -268,6 +309,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.BROWN_DARK,
     marginBottom: 20,
+  },
+  templateBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.ORANGE_LIGHT,
+    borderRadius: 999,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    marginTop: -12,
+    marginBottom: 16,
+  },
+  templateBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.BROWN_DARK,
   },
   field: {
     marginBottom: 16,

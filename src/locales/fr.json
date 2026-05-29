@@ -120,7 +120,41 @@
     "spoonCost": "{{count}} cuillère(s)",
     "dueDate": "Échéance : {{date}}",
     "newTask": "Nouvelle tâche",
-    "errorLoading": "Erreur lors du chargement"
+    "errorLoading": "Erreur lors du chargement",
+    "hygiene": {
+      "shower": "Se doucher",
+      "brush_teeth": "Se brosser les dents",
+      "hair": "Se coiffer"
+    },
+    "household": {
+      "groceries": "Faire les courses",
+      "laundry": "Faire la lessive",
+      "dishes": "Faire la vaisselle",
+      "vacuum": "Passer l'aspirateur"
+    },
+    "food": {
+      "cook_meal": "Cuisiner un repas",
+      "prepare_snack": "Préparer une collation"
+    },
+    "admin": {
+      "bills": "Payer les factures",
+      "emails": "Gérer les emails",
+      "appointment": "Prendre un rendez-vous"
+    },
+    "social": {
+      "call_friend": "Appeler un ami",
+      "text_family": "Écrire à la famille"
+    },
+    "health": {
+      "take_meds": "Prendre ses médicaments",
+      "exercise": "Faire de l'exercice",
+      "rest": "Se reposer"
+    },
+    "leisure": {
+      "read": "Lire",
+      "music": "Écouter de la musique",
+      "hobby": "Loisir créatif"
+    }
   },
   "calendar": {
     "title": "Calendrier",
@@ -133,7 +167,9 @@
     "tasksCount": "{{count}} tâche(s)",
     "spoonDistribution": "Répartition des cuillères",
     "completed": "Terminées",
-    "planned": "Planifiées"
+    "planned": "Planifiées",
+    "weekdays": ["L", "M", "M", "J", "V", "S", "D"],
+    "weekdayLabels": ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
   },
   "templates": {
     "title": "Modèles de tâches",
@@ -143,7 +179,12 @@
     "loading": "Chargement des modèles",
     "error": "Erreur lors du chargement des modèles",
     "successMessage": "Tâches ajoutées avec succès",
-    "selectHint": "Appuyez pour sélectionner cette tâche modèle"
+    "selectHint": "Appuyez pour sélectionner cette tâche modèle",
+    "chooseTitle": "Choisir un modèle",
+    "chooseSubtitle": "Partez d'une tâche prête à l'emploi ou créez la vôtre",
+    "createManually": "Créer manuellement",
+    "createManuallyHint": "Ouvre un formulaire vierge pour créer votre propre tâche",
+    "templateHint": "Ouvre le formulaire pré-rempli à partir de ce modèle"
   },
   "profile": {
     "title": "Mon profil",
@@ -198,6 +239,9 @@
     "notesPlaceholder": "Notes supplémentaires",
     "saveButton": "Enregistrer",
     "save": "Enregistrer",
+    "add": "Ajouter",
+    "fromTemplate": "Depuis modèle",
+    "added": "Tâche ajoutée",
     "deleteButton": "Supprimer la tâche",
     "delete": "Supprimer la tâche",
     "deleteConfirmTitle": "Supprimer cette tâche ?",

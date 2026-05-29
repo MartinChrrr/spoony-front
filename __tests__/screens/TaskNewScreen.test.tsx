@@ -6,9 +6,12 @@ import { render, fireEvent, waitFor, screen } from '@testing-library/react-nativ
 // ---------------------------------------------------------------------------
 
 const mockBack = jest.fn();
+const mockNavigate = jest.fn();
+const mockSearchParams = jest.fn(() => ({}));
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ back: mockBack }),
+  useRouter: () => ({ back: mockBack, navigate: mockNavigate }),
+  useLocalSearchParams: () => mockSearchParams(),
 }));
 
 jest.mock('react-i18next', () => ({
@@ -48,6 +51,7 @@ describe('TaskNewScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockMutateAsync.mockResolvedValue({});
+    mockSearchParams.mockReturnValue({});
   });
 
   // -------------------------------------------------------------------------
@@ -71,6 +75,11 @@ describe('TaskNewScreen', () => {
       expect(mockMutateAsync).toHaveBeenCalledWith(
         expect.objectContaining({ name: 'Nouvelle tâche' }),
       );
+    });
+
+    // Assert — after adding, the user lands back on the Tasks list (per spec)
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/(tabs)/tasks');
     });
   });
 
@@ -149,5 +158,40 @@ describe('TaskNewScreen', () => {
 
     // Assert — mutation was NOT called
     expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
+  // -------------------------------------------------------------------------
+  // 4. Pre-fills the form (with "from template" badge) when opened from a model
+  // -------------------------------------------------------------------------
+
+  it('should_PrefillAndShowBadge_When_OpenedFromTemplate', async () => {
+    // Arrange — launched from "Choisir un modèle"
+    mockSearchParams.mockReturnValue({
+      baseTaskId: 'a1',
+      templateKey: 'tasks.hygiene.shower',
+      spoonCost: '2',
+      importance: 'MEDIUM',
+      category: 'HYGIENE',
+    });
+    renderScreen();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('from-template-badge')).toBeTruthy();
+    });
+
+    // Act — submit without changing anything else (editable, not forced)
+    fireEvent.press(screen.getByTestId('save-task-button'));
+
+    // Assert — prefilled values from the template are submitted
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'tasks.hygiene.shower',
+          category: 'HYGIENE',
+          importance: 'MEDIUM',
+          spoonCost: 2,
+        }),
+      );
+    });
   });
 });

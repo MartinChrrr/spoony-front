@@ -78,11 +78,18 @@ export default function CalendarScreen(): React.ReactElement {
     [viewYear, viewMonth],
   );
 
-  // First day of month weekday offset (0=Sun, 1=Mon, …)
+  // First day of month weekday offset, Monday-first (0=Mon … 6=Sun)
   const firstDayOffset = useMemo(
-    () => new Date(viewYear, viewMonth, 1).getDay(),
+    () => (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7,
     [viewYear, viewMonth],
   );
+
+  // Weekday header labels (Monday-first), e.g. ["L","M","M","J","V","S","D"].
+  // Defensive: returnObjects yields the raw key string if the resource is absent.
+  const rawWeekdays = t('calendar.weekdays', { returnObjects: true });
+  const rawWeekdayLabels = t('calendar.weekdayLabels', { returnObjects: true });
+  const weekdays = Array.isArray(rawWeekdays) ? (rawWeekdays as string[]) : [];
+  const weekdayLabels = Array.isArray(rawWeekdayLabels) ? (rawWeekdayLabels as string[]) : [];
 
   const selectedLogs = selectedDate !== null ? (logsByDate[selectedDate] ?? []) : [];
   const completedCount = selectedLogs.filter((l) => l.status === 'COMPLETED').length;
@@ -149,10 +156,26 @@ export default function CalendarScreen(): React.ReactElement {
       {/* ------------------------------------------------------------------ */}
       {/* Calendar grid                                                        */}
       {/* ------------------------------------------------------------------ */}
+      {/* Weekday header row (Monday-first), aligned with the grid columns */}
+      <View style={styles.grid} testID="calendar-weekday-header">
+        {weekdays.map((label, i) => (
+          <View
+            key={`weekday-${i}`}
+            style={styles.weekdayCell}
+            accessibilityRole="text"
+            accessibilityLabel={weekdayLabels[i] ?? label}
+          >
+            <Text style={styles.weekdayText} importantForAccessibility="no">
+              {label}
+            </Text>
+          </View>
+        ))}
+      </View>
+
       <View style={styles.grid}>
-        {/* Empty cells for weekday offset */}
+        {/* Transparent spacers for the first-day offset (no white empty cells) */}
         {Array.from({ length: firstDayOffset }).map((_, i) => (
-          <View key={`empty-${i}`} style={styles.dayCell} />
+          <View key={`empty-${i}`} style={styles.emptyCell} />
         ))}
 
         {daysInMonth.map((day) => {
@@ -297,6 +320,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.WHITE,
+  },
+  // Offset spacer: same footprint as a day cell but invisible (no white box)
+  emptyCell: {
+    width: CELL_SIZE,
+    height: CELL_SIZE,
+    backgroundColor: 'transparent',
+  },
+  // Weekday header
+  weekdayCell: {
+    width: CELL_SIZE,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  weekdayText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.BROWN_MEDIUM,
   },
   dayCellSelected: {
     backgroundColor: COLORS.BROWN_DARK,

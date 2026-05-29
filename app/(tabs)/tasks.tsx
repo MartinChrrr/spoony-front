@@ -247,7 +247,7 @@ export default function TasksScreen(): React.ReactElement {
       {/* ------------------------------------------------------------------ */}
       <Pressable
         testID="fab-new-task"
-        onPress={() => router.push('/task/new')}
+        onPress={() => router.push('/task/choose')}
         style={styles.fab}
         accessibilityRole="button"
         accessibilityLabel={t('tasks.newTask')}

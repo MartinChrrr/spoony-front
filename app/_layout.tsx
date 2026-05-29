@@ -7,6 +7,7 @@ import { Slot, useRouter, useSegments } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { AuthProvider, useAuth } from '@/features/auth/context/AuthContext';
+import { ToastProvider } from '@/components/ui/Toast';
 import { COLORS } from '@/constants/colors';
 
 const queryClient = new QueryClient();
@@ -51,7 +52,9 @@ export default function RootLayout(): React.ReactElement {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <AuthGate />
+        <ToastProvider>
+          <AuthGate />
+        </ToastProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
