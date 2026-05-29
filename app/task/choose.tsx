@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { baseTaskRepository } from '@/data/repositories/baseTaskRepository';
+import { BackButton } from '@/components/ui/BackButton';
 import { COLORS } from '@/constants/colors';
 import type { BaseTaskResponse } from '@/data/api/endpoints/baseTasks';
 
@@ -44,6 +45,7 @@ export default function ChooseTemplateScreen(): React.ReactElement {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
+        <BackButton />
         <Text style={styles.screenTitle} accessibilityRole="header">
           {t('templates.chooseTitle')}
         </Text>

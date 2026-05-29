@@ -7,6 +7,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { suggestionEndpoints, SuggestionResponse } from '@/data/api/endpoints/suggestions';
 import { taskLogEndpoints } from '@/data/api/endpoints/taskLogs';
 import { Button } from '@/components/ui/button-custom';
+import { BackButton } from '@/components/ui/BackButton';
 import { COLORS } from '@/constants/colors';
 
 export default function CheckinStep3() {
@@ -73,6 +74,7 @@ export default function CheckinStep3() {
 
   return (
     <View style={styles.container}>
+      <BackButton />
       {/* Screen title — required for screen-reader navigation landmarks */}
       <Text style={styles.screenTitle} accessibilityRole="header">
         {t('checkin.step3Title')}

@@ -2,6 +2,7 @@
   "common": {
     "appName": "Spoony",
     "loading": "Chargement en cours",
+    "back": "Retour",
     "cancel": "Annuler",
     "offlineBanner": "Pas de connexion. Vos données sont là, mais vous ne pouvez pas les modifier."
   },

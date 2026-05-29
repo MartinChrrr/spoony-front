@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { taskRepository } from '@/data/repositories/taskRepository';
 import { Button } from '@/components/ui/button-custom';
+import { BackButton } from '@/components/ui/BackButton';
 import { COLORS } from '@/constants/colors';
 import { Importance } from '@/data/api/types';
 
@@ -119,6 +120,7 @@ export default function TaskDetailScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      <BackButton />
       {/* Screen header landmark — required for VoiceOver/TalkBack navigation */}
       <Text style={styles.screenTitle} accessibilityRole="header">
         {name || t('taskForm.editTaskTitle')}

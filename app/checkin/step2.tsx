@@ -6,6 +6,7 @@ import { useMutation } from '@tanstack/react-query';
 
 import { energyEndpoints, DeclareEnergyRequest } from '@/data/api/endpoints/energy';
 import { Button } from '@/components/ui/button-custom';
+import { BackButton } from '@/components/ui/BackButton';
 import { COLORS } from '@/constants/colors';
 
 // ---------------------------------------------------------------------------
@@ -134,6 +135,7 @@ export default function CheckinStep2() {
 
   return (
     <View style={styles.container}>
+      <BackButton />
       {/* Title */}
       <Text style={styles.title} accessibilityRole="header">
         {t('checkin.step2Title')}

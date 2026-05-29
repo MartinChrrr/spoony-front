@@ -8,6 +8,7 @@ import { TaskResponse } from '@/data/api/endpoints/tasks';
 import { taskRepository } from '@/data/repositories/taskRepository';
 import { taskLogEndpoints } from '@/data/api/endpoints/taskLogs';
 import { Button } from '@/components/ui/button-custom';
+import { BackButton } from '@/components/ui/BackButton';
 import { COLORS } from '@/constants/colors';
 
 export default function CheckinStep1() {
@@ -36,6 +37,7 @@ export default function CheckinStep1() {
 
   return (
     <View style={styles.container}>
+      <BackButton />
       <Text style={styles.screenTitle} accessibilityRole="header">
         {t('checkin.step1Title')}
       </Text>

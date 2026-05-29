@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ date: '2026-04-10' }),
+  useRouter: () => ({ back: jest.fn() }),
 }));
 
 jest.mock('react-i18next', () => ({

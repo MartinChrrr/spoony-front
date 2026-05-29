@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { taskLogRepository } from '@/data/repositories/taskLogRepository';
 import { taskRepository } from '@/data/repositories/taskRepository';
+import { BackButton } from '@/components/ui/BackButton';
 import { COLORS } from '@/constants/colors';
 import type { TaskLogResponse } from '@/data/api/endpoints/taskLogs';
 import type { TaskResponse } from '@/data/api/endpoints/tasks';
@@ -78,6 +79,7 @@ export default function DayDetailScreen(): React.ReactElement {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <BackButton />
       <Text style={styles.title} accessibilityRole="header">
         {formatDate(dateStr)}
       </Text>
