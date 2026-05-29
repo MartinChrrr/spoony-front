@@ -23,124 +23,106 @@ describe('OnboardingScreen', () => {
     jest.clearAllMocks();
   });
 
-  it('should_DisplayWelcomeStep_When_ScreenLoads', () => {
-    // Arrange / Act
+  it('should_DisplayIntroStep_When_ScreenLoads', () => {
     const { getByText } = render(<OnboardingScreen />);
 
-    // Assert
-    expect(getByText('onboarding.welcomeTitle')).toBeTruthy();
-    expect(getByText('onboarding.welcomeDescription')).toBeTruthy();
-  });
-
-  it('should_DisplaySpoonsStep_When_NextPressed', () => {
-    // Arrange
-    const { getByRole, getByText } = render(<OnboardingScreen />);
-
-    // Act
-    fireEvent.press(getByRole('button', { name: 'onboarding.nextButton' }));
-
-    // Assert
     expect(getByText('onboarding.spoonsTitle')).toBeTruthy();
     expect(getByText('onboarding.spoonsDescription')).toBeTruthy();
   });
 
-  it('should_DisplayDisclaimerStep_When_NextPressedTwice', () => {
-    // Arrange
+  it('should_DisplayInputStep_When_NextPressed', () => {
     const { getByRole, getByText } = render(<OnboardingScreen />);
 
-    // Act
+    fireEvent.press(getByRole('button', { name: 'onboarding.nextButton' }));
+
+    expect(getByText('onboarding.inputTitle')).toBeTruthy();
+    expect(getByText('onboarding.inputDescription')).toBeTruthy();
+  });
+
+  it('should_DisplayCostsStep_When_NextPressedTwice', () => {
+    const { getByRole, getByText } = render(<OnboardingScreen />);
+
     fireEvent.press(getByRole('button', { name: 'onboarding.nextButton' }));
     fireEvent.press(getByRole('button', { name: 'onboarding.nextButton' }));
 
-    // Assert
+    expect(getByText('onboarding.costsTitle')).toBeTruthy();
     expect(getByText('onboarding.disclaimerTitle')).toBeTruthy();
-    expect(getByText('onboarding.disclaimerDescription')).toBeTruthy();
+  });
+
+  it('should_UpdateDemoSpoons_When_PresetPressed', () => {
+    const { getByRole, getByTestId, getByText } = render(<OnboardingScreen />);
+    fireEvent.press(getByRole('button', { name: 'onboarding.nextButton' }));
+
+    // Default demo value is 8; pressing the "exhausted" preset (3) updates it
+    fireEvent.press(getByTestId('onboarding-preset-checkin.presetExhausted'));
+
+    expect(getByText('3')).toBeTruthy();
   });
 
   it('should_ShowPreviousButton_When_NotOnFirstStep', () => {
-    // Arrange
     const { getByRole } = render(<OnboardingScreen />);
 
-    // Act
     fireEvent.press(getByRole('button', { name: 'onboarding.nextButton' }));
 
-    // Assert
     expect(getByRole('button', { name: 'onboarding.previousButton' })).toBeTruthy();
   });
 
   it('should_HidePreviousButton_When_OnFirstStep', () => {
-    // Arrange / Act
     const { queryByRole } = render(<OnboardingScreen />);
 
-    // Assert
     expect(queryByRole('button', { name: 'onboarding.previousButton' })).toBeNull();
   });
 
   it('should_GoBackToStep1_When_PreviousPressed', () => {
-    // Arrange
     const { getByRole, getByText } = render(<OnboardingScreen />);
     fireEvent.press(getByRole('button', { name: 'onboarding.nextButton' }));
 
-    // Act
     fireEvent.press(getByRole('button', { name: 'onboarding.previousButton' }));
 
-    // Assert
-    expect(getByText('onboarding.welcomeTitle')).toBeTruthy();
+    expect(getByText('onboarding.spoonsTitle')).toBeTruthy();
   });
 
   it('should_DisableStartButton_When_DisclaimerNotAccepted', () => {
-    // Arrange
     const { getByRole } = render(<OnboardingScreen />);
     fireEvent.press(getByRole('button', { name: 'onboarding.nextButton' }));
     fireEvent.press(getByRole('button', { name: 'onboarding.nextButton' }));
 
-    // Act
     const startButton = getByRole('button', { name: 'onboarding.startButton' });
 
-    // Assert
     expect(startButton.props.accessibilityState?.disabled).toBe(true);
   });
 
   it('should_EnableStartButton_When_DisclaimerAccepted', () => {
-    // Arrange
     const { getByRole } = render(<OnboardingScreen />);
     fireEvent.press(getByRole('button', { name: 'onboarding.nextButton' }));
     fireEvent.press(getByRole('button', { name: 'onboarding.nextButton' }));
 
-    // Act
     fireEvent.press(getByRole('checkbox', { name: 'onboarding.disclaimerCheckbox' }));
 
-    // Assert
     const startButton = getByRole('button', { name: 'onboarding.startButton' });
     expect(startButton.props.accessibilityState?.disabled).toBe(false);
   });
 
-  it('should_ShowCheckbox_When_OnDisclaimerStep', () => {
-    // Arrange
+  it('should_ShowCheckbox_When_OnCostsStep', () => {
     const { getByRole, queryByRole } = render(<OnboardingScreen />);
 
-    // Assert - no checkbox on step 1
+    // No checkbox on the intro step
     expect(queryByRole('checkbox')).toBeNull();
 
-    // Act
     fireEvent.press(getByRole('button', { name: 'onboarding.nextButton' }));
     fireEvent.press(getByRole('button', { name: 'onboarding.nextButton' }));
 
-    // Assert - checkbox on step 3
     expect(getByRole('checkbox')).toBeTruthy();
   });
 
   it('should_CallCompleteOnboarding_When_StartPressed', async () => {
-    // Arrange
     const { getByRole } = render(<OnboardingScreen />);
     fireEvent.press(getByRole('button', { name: 'onboarding.nextButton' }));
     fireEvent.press(getByRole('button', { name: 'onboarding.nextButton' }));
     fireEvent.press(getByRole('checkbox', { name: 'onboarding.disclaimerCheckbox' }));
 
-    // Act
     fireEvent.press(getByRole('button', { name: 'onboarding.startButton' }));
 
-    // Assert
     await waitFor(() => {
       expect(mockCompleteOnboarding).toHaveBeenCalledTimes(1);
     });

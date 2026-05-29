@@ -6,6 +6,7 @@ import {
   Pressable,
   StyleSheet,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { taskLogRepository } from '@/data/repositories/taskLogRepository';
@@ -45,6 +46,7 @@ function toDateString(date: Date): string {
 
 export default function CalendarScreen(): React.ReactElement {
   const { t } = useTranslation();
+  const router = useRouter();
 
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
@@ -260,6 +262,17 @@ export default function CalendarScreen(): React.ReactElement {
               ]}
             />
           </View>
+
+          <Pressable
+            testID="day-detail-link"
+            onPress={() => router.push(`/calendar/${selectedDate}`)}
+            style={styles.detailLink}
+            accessibilityRole="link"
+            accessibilityLabel={t('calendar.viewDetail')}
+            accessibilityHint={t('calendar.viewDetailHint')}
+          >
+            <Text style={styles.detailLinkText}>{t('calendar.viewDetail')} →</Text>
+          </Pressable>
         </View>
       )}
     </ScrollView>
@@ -376,6 +389,16 @@ const styles = StyleSheet.create({
   summaryText: {
     fontSize: 14,
     color: COLORS.BROWN_DARK,
+  },
+  detailLink: {
+    minHeight: 44,
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  detailLinkText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.ORANGE,
   },
 
   // Distribution bar
