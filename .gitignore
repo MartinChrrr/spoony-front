@@ -5,6 +5,8 @@
 
 # Documentation (private)
 .docs/
+.agents/
+.claude/
 
 # Dependencies
 node_modules/
