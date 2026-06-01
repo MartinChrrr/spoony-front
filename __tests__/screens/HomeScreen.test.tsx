@@ -35,6 +35,7 @@ jest.mock('@/features/auth/hooks/useAuth', () => ({
 jest.mock('@tanstack/react-query', () => ({
   useQuery: jest.fn(),
   useMutation: jest.fn(),
+  useQueryClient: jest.fn(() => ({ invalidateQueries: jest.fn() })),
 }));
 
 jest.mock('@/data/repositories/energyRepository', () => ({
@@ -47,6 +48,14 @@ jest.mock('@/data/repositories/taskLogRepository', () => ({
 
 jest.mock('@/data/repositories/taskRepository', () => ({
   taskRepository: { getAll: jest.fn() },
+}));
+
+jest.mock('@/data/api/endpoints/taskLogs', () => ({
+  taskLogEndpoints: { bulkPostpone: jest.fn() },
+}));
+
+jest.mock('@/data/api/endpoints/messages', () => ({
+  messageEndpoints: { getRandom: jest.fn() },
 }));
 
 // ---------------------------------------------------------------------------
@@ -149,6 +158,12 @@ function setupDefaultMocks() {
     } as ReturnType<typeof useQuery>)
     .mockReturnValueOnce({
       data: MOCK_TASKS,
+      isLoading: false,
+      isError: false,
+    } as ReturnType<typeof useQuery>)
+    // 4th+ useQuery calls (e.g. rest-system benevolent message)
+    .mockReturnValue({
+      data: null,
       isLoading: false,
       isError: false,
     } as ReturnType<typeof useQuery>);
@@ -270,5 +285,48 @@ describe('HomeScreen', () => {
 
     // Assert
     expect(mockPush).toHaveBeenCalledWith('/checkin/step2');
+  });
+
+  // -------------------------------------------------------------------------
+  // 7. Rest system — Bravo card when every task is completed
+  // -------------------------------------------------------------------------
+
+  it('should_ShowBravo_When_AllTasksCompleted', () => {
+    // Arrange — both logs completed
+    const allDoneLogs = MOCK_TASK_LOGS.map((l) => ({ ...l, status: 'COMPLETED' as const }));
+    mockedUseQuery
+      .mockReturnValueOnce({ data: { ...MOCK_ENERGY, spoons: 8, spoonsUsed: 5 }, isLoading: false, isError: false } as ReturnType<typeof useQuery>)
+      .mockReturnValueOnce({ data: allDoneLogs, isLoading: false, isError: false } as ReturnType<typeof useQuery>)
+      .mockReturnValueOnce({ data: MOCK_TASKS, isLoading: false, isError: false } as ReturnType<typeof useQuery>)
+      .mockReturnValue({ data: { id: 'm1', key: 'messages.completion.celebrate', context: 'COMPLETION' }, isLoading: false, isError: false } as ReturnType<typeof useQuery>);
+    mockedUseMutation.mockReturnValue({ mutateAsync: jest.fn(), isPending: false } as ReturnType<typeof useMutation>);
+
+    // Act
+    renderScreen();
+
+    // Assert
+    expect(screen.getByTestId('rest-bravo')).toBeTruthy();
+    expect(screen.queryByTestId('rest-nudge')).toBeNull();
+  });
+
+  // -------------------------------------------------------------------------
+  // 8. Rest system — Nudge when ≤1 spoon remains and tasks are pending
+  // -------------------------------------------------------------------------
+
+  it('should_ShowNudge_When_LowEnergyAndTasksRemain', () => {
+    // Arrange — 1 spoon left (8 - 7), MOCK_TASK_LOGS has one PLANNED task
+    mockedUseQuery
+      .mockReturnValueOnce({ data: { ...MOCK_ENERGY, spoons: 8, spoonsUsed: 7 }, isLoading: false, isError: false } as ReturnType<typeof useQuery>)
+      .mockReturnValueOnce({ data: MOCK_TASK_LOGS, isLoading: false, isError: false } as ReturnType<typeof useQuery>)
+      .mockReturnValueOnce({ data: MOCK_TASKS, isLoading: false, isError: false } as ReturnType<typeof useQuery>)
+      .mockReturnValue({ data: { id: 'm2', key: 'messages.low_energy.breathe', context: 'LOW_ENERGY' }, isLoading: false, isError: false } as ReturnType<typeof useQuery>);
+    mockedUseMutation.mockReturnValue({ mutateAsync: jest.fn(), isPending: false } as ReturnType<typeof useMutation>);
+
+    // Act
+    renderScreen();
+
+    // Assert
+    expect(screen.getByTestId('rest-nudge')).toBeTruthy();
+    expect(screen.getByTestId('postpone-remaining-button')).toBeTruthy();
   });
 });

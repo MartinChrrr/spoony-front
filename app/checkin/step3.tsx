@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation } from '@tanstack/react-query';
 
 import { suggestionEndpoints, SuggestionResponse } from '@/data/api/endpoints/suggestions';
-import { taskLogEndpoints } from '@/data/api/endpoints/taskLogs';
+import { taskLogEndpoints, TaskLogResponse } from '@/data/api/endpoints/taskLogs';
 import { Button } from '@/components/ui/button-custom';
 import { BackButton } from '@/components/ui/BackButton';
 import { COLORS } from '@/constants/colors';
@@ -59,16 +59,38 @@ export default function CheckinStep3() {
     [suggestions, checkedIds],
   );
 
+  // Tasks already logged today must not be re-created (UNIQUE user_task_id+date).
+  const { data: todayLogs = [] } = useQuery<TaskLogResponse[]>({
+    queryKey: ['task-logs'],
+    queryFn: async () => {
+      const res = await taskLogEndpoints.getAll();
+      return res.data.data ?? [];
+    },
+  });
+  const alreadyLoggedIds = useMemo(
+    () => new Set(todayLogs.map((l) => l.userTaskId)),
+    [todayLogs],
+  );
+
+  const [submitError, setSubmitError] = useState('');
+
   const { mutateAsync, isPending } = useMutation({
     mutationFn: taskLogEndpoints.create,
   });
 
   const handleLetsGo = async () => {
+    setSubmitError('');
+    // Only create logs for tasks that don't already have one today.
+    const newIds = [...checkedIds].filter((id) => !alreadyLoggedIds.has(id));
+    if (newIds.length === 0) {
+      router.replace('/(tabs)');
+      return;
+    }
     try {
-      await mutateAsync({ userTaskIds: [...checkedIds] });
+      await mutateAsync({ userTaskIds: newIds });
       router.replace('/(tabs)');
     } catch {
-      // Stay on screen — error is visible via isPending becoming false
+      setSubmitError(t('checkin.saveError'));
     }
   };
 
@@ -181,6 +203,11 @@ export default function CheckinStep3() {
       )}
 
       <View style={styles.footer}>
+        {submitError ? (
+          <Text style={styles.errorText} accessibilityRole="alert">
+            {submitError}
+          </Text>
+        ) : null}
         <Button
           testID="lets-go-button"
           label={t('checkin.letsGo')}

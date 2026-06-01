@@ -1,6 +1,7 @@
 {
   "common": {
     "appName": "Spoony",
+    "tagline": "Manage your energy, gently",
     "loading": "Loading",
     "back": "Back",
     "cancel": "Cancel",
@@ -41,8 +42,8 @@
     "server": "A server error occurred. Please try again later."
   },
   "checkin": {
-    "step1Title": "Overdue tasks",
-    "noOverdueTasks": "No overdue tasks",
+    "step1Title": "Tasks to pick up",
+    "noOverdueTasks": "No tasks to pick up",
     "postponeOne": "Postpone",
     "postponeOneLabelled": "Postpone {{name}}",
     "postponeAll": "Postpone all to tomorrow",
@@ -56,12 +57,14 @@
     "presetNotToday": "Not today",
     "spoonsLabel": "spoons",
     "spoonsCount": "{{count}} spoons",
+    "spoonCost": "{{count}} spoon(s)",
     "spoonsSlider": "Number of spoons",
     "sliderMin": "Minimum: {{min}} spoons",
     "sliderMax": "Maximum: {{max}} spoons",
     "decreaseSpoons": "Decrease spoons",
     "increaseSpoons": "Increase spoons",
     "continue": "Continue",
+    "saveError": "Couldn't save your energy. Please try again.",
     "step3Title": "Your tasks for today",
     "exceedsBudget": "Exceeds budget",
     "spoonsUsed": "{{used}} / {{total}} spoons used",
@@ -107,7 +110,12 @@
     "taskCompleted": "{{name}} — completed",
     "taskPending": "{{name}} — pending",
     "taskCheckboxHint": "Tap to mark as completed",
-    "errorLoading": "Error loading data"
+    "errorLoading": "Error loading data",
+    "bravoTitle": "All done!",
+    "monthlyCompleted": "{{count}} day(s) completed this month",
+    "nudgeTitle": "Time to take a break",
+    "postponeRemaining": "Postpone tasks to tomorrow",
+    "restBanner": "The remaining tasks can wait until tomorrow."
   },
   "tasks": {
     "title": "My tasks",
@@ -267,5 +275,36 @@
     "cancelButton": "Cancel",
     "errorSaving": "Error saving",
     "errorDeleting": "Error deleting"
+  },
+  "messages": {
+    "welcome": {
+      "return": "Good to see you again.",
+      "no_rush": "No rush, go at your own pace."
+    },
+    "rest": {
+      "listen_body": "Listen to your body, it knows.",
+      "deserved": "This rest is well deserved."
+    },
+    "completion": {
+      "celebrate": "Well done, you took care of yourself today!",
+      "proud": "Be proud of what you accomplished."
+    },
+    "low_energy": {
+      "breathe": "Breathe. One thing at a time.",
+      "gentle": "Be gentle with yourself today."
+    },
+    "zero_energy": {
+      "comfort": "Resting is moving forward too.",
+      "reassurance": "Your tasks will wait for you tomorrow.",
+      "self_care": "Taking care of yourself is never wasted time."
+    },
+    "skip": {
+      "ok": "It's perfectly OK to skip.",
+      "choice": "Your choice, your pace."
+    },
+    "end_of_day": {
+      "enough": "You've done enough for today.",
+      "tomorrow": "See you tomorrow, gently."
+    }
   }
 }

@@ -2,26 +2,40 @@ import React, { useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { energyRepository } from '@/data/repositories/energyRepository';
 import { taskLogRepository } from '@/data/repositories/taskLogRepository';
 import { taskRepository } from '@/data/repositories/taskRepository';
+import { taskLogEndpoints } from '@/data/api/endpoints/taskLogs';
+import { messageEndpoints } from '@/data/api/endpoints/messages';
 import SpoonGauge from '@/components/shared/SpoonGauge';
 import { COLORS } from '@/constants/colors';
 import type { EnergyResponse } from '@/data/api/endpoints/energy';
 import type { TaskLogResponse } from '@/data/api/endpoints/taskLogs';
 import type { TaskResponse } from '@/data/api/endpoints/tasks';
+import type { MessageResponse } from '@/data/api/endpoints/messages';
+import type { TaskLogStatus } from '@/data/api/types';
+
+// Rest system levels (spec: Nudge ≤1🥄, Banner, Bravo when all done).
+type RestLevel = 'bravo' | 'nudge' | 'banner' | null;
+
+const REST_CONTEXT: Record<Exclude<RestLevel, null>, string> = {
+  bravo: 'COMPLETION',
+  nudge: 'LOW_ENERGY',
+  banner: 'REST',
+};
 
 interface UpdateStatusArgs {
   id: string;
-  status: 'COMPLETED' | 'PLANNED' | 'SKIPPED' | 'POSTPONED';
+  status: TaskLogStatus;
 }
 
 export default function HomeScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data: energy } = useQuery<EnergyResponse | null>({
     queryKey: ['energy', 'today'],
@@ -45,6 +59,11 @@ export default function HomeScreen(): React.ReactElement {
   >({
     mutationFn: ({ id, status }: UpdateStatusArgs) =>
       taskLogRepository.updateStatus(id, { status }),
+    onSuccess: () => {
+      // Refresh the day's logs + energy so the list and rest system update.
+      queryClient.invalidateQueries({ queryKey: ['task-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['energy', 'today'] });
+    },
   });
 
   const todayItems = useMemo<Array<{ log: TaskLogResponse; taskName: string }>>(
@@ -55,6 +74,49 @@ export default function HomeScreen(): React.ReactElement {
       }),
     [taskLogs, tasks],
   );
+
+  // ---- Rest system (3 levels) -------------------------------------------
+  const totalCount = todayItems.length;
+  const completedCount = todayItems.filter(({ log }) => log.status === 'COMPLETED').length;
+  const incompleteCount = totalCount - completedCount;
+  const spoonsRemaining = energy != null ? energy.spoons - energy.spoonsUsed : null;
+
+  const restLevel: RestLevel = useMemo(() => {
+    if (totalCount > 0 && incompleteCount === 0) return 'bravo';
+    if (energy != null && spoonsRemaining != null && incompleteCount > 0) {
+      if (spoonsRemaining <= 1) return 'nudge';
+      if (spoonsRemaining <= Math.floor(energy.spoons / 2)) return 'banner';
+    }
+    return null;
+  }, [totalCount, incompleteCount, energy, spoonsRemaining]);
+
+  // Monthly cumulative: distinct days this month with at least one completed task.
+  const monthlyCompletedDays = useMemo(() => {
+    const prefix = new Date().toISOString().slice(0, 7); // YYYY-MM
+    const days = new Set<string>();
+    (taskLogs ?? []).forEach((log) => {
+      if (log.status === 'COMPLETED' && log.date.startsWith(prefix)) days.add(log.date);
+    });
+    return days.size;
+  }, [taskLogs]);
+
+  const restContext = restLevel ? REST_CONTEXT[restLevel] : null;
+  const { data: restMessage } = useQuery<MessageResponse | null>({
+    queryKey: ['message', restContext],
+    queryFn: async () => {
+      const res = await messageEndpoints.getRandom(restContext as string);
+      return res.data.data;
+    },
+    enabled: restContext != null,
+  });
+
+  const { mutateAsync: postponeAll, isPending: isPostponing } = useMutation({
+    mutationFn: () => taskLogEndpoints.bulkPostpone(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
 
   const today = new Date().toLocaleDateString(undefined, {
     weekday: 'long',
@@ -76,6 +138,50 @@ export default function HomeScreen(): React.ReactElement {
       {energy != null && (
         <View testID="spoon-gauge" style={styles.gaugeWrapper}>
           <SpoonGauge spoons={energy.spoons} spoonsUsed={energy.spoonsUsed} />
+        </View>
+      )}
+
+      {/* Rest system — level 3: celebration when everything is done */}
+      {restLevel === 'bravo' && (
+        <View testID="rest-bravo" style={styles.bravoCard} accessible accessibilityRole="summary">
+          <Text style={styles.bravoTitle}>{t('home.bravoTitle')}</Text>
+          {restMessage != null && <Text style={styles.bravoMessage}>{t(restMessage.key)}</Text>}
+          <Text style={styles.bravoMonthly}>
+            {t('home.monthlyCompleted', { count: monthlyCompletedDays })}
+          </Text>
+        </View>
+      )}
+
+      {/* Rest system — level 1: nudge when ≤1 spoon left and tasks remain */}
+      {restLevel === 'nudge' && (
+        <View testID="rest-nudge" style={styles.nudgeCard}>
+          <Text style={styles.nudgeTitle} accessibilityRole="header">
+            {t('home.nudgeTitle')}
+          </Text>
+          {restMessage != null && <Text style={styles.nudgeMessage}>{t(restMessage.key)}</Text>}
+          <Pressable
+            testID="postpone-remaining-button"
+            onPress={async () => {
+              try {
+                await postponeAll();
+              } catch {
+                // silent — refetch reflects the real state
+              }
+            }}
+            disabled={isPostponing}
+            accessibilityRole="button"
+            accessibilityLabel={t('home.postponeRemaining')}
+            style={styles.nudgeButton}
+          >
+            <Text style={styles.nudgeButtonText}>{t('home.postponeRemaining')}</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* Rest system — level 2: gentle banner when energy is getting low */}
+      {restLevel === 'banner' && (
+        <View testID="rest-banner" style={styles.restBanner} accessible accessibilityRole="text">
+          <Text style={styles.restBannerText}>{t('home.restBanner')}</Text>
         </View>
       )}
 
@@ -169,6 +275,76 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.WHITE,
     borderRadius: 12,
     padding: 16,
+  },
+
+  // Rest system — Bravo (celebration)
+  bravoCard: {
+    backgroundColor: COLORS.WHITE,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.SUCCESS,
+    padding: 16,
+    gap: 4,
+  },
+  bravoTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.SUCCESS,
+  },
+  bravoMessage: {
+    fontSize: 14,
+    color: COLORS.BROWN_DARK,
+  },
+  bravoMonthly: {
+    fontSize: 13,
+    color: COLORS.BROWN_MEDIUM,
+    marginTop: 4,
+  },
+
+  // Rest system — Nudge (protective)
+  nudgeCard: {
+    backgroundColor: COLORS.WHITE,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.BROWN_LIGHT,
+    padding: 16,
+    gap: 10,
+  },
+  nudgeTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.BROWN_DARK,
+  },
+  nudgeMessage: {
+    fontSize: 14,
+    color: COLORS.BROWN_DARK,
+  },
+  nudgeButton: {
+    minHeight: 44,
+    backgroundColor: COLORS.ORANGE,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+  },
+  nudgeButtonText: {
+    color: COLORS.WHITE,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  // Rest system — gentle banner
+  restBanner: {
+    backgroundColor: COLORS.WHITE,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.SUCCESS,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  restBannerText: {
+    fontSize: 14,
+    color: COLORS.BROWN_DARK,
   },
   reevaluateButton: {
     minHeight: 44,

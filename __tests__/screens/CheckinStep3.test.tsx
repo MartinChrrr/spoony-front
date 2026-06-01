@@ -42,6 +42,7 @@ jest.mock('@/data/api/endpoints/suggestions', () => ({
 jest.mock('@/data/api/endpoints/taskLogs', () => ({
   taskLogEndpoints: {
     create: jest.fn(),
+    getAll: jest.fn(),
   },
 }));
 
@@ -91,10 +92,14 @@ const mockedUseQuery = useQuery as jest.MockedFunction<typeof useQuery>;
 const mockedUseMutation = useMutation as jest.MockedFunction<typeof useMutation>;
 
 function setupDefaultMocks() {
-  mockedUseQuery.mockReturnValue({
-    data: MOCK_SUGGESTIONS,
-    isLoading: false,
-  } as ReturnType<typeof useQuery>);
+  // Suggestions query returns the fixtures; today's task-logs query returns none
+  // (so nothing is filtered out as already-logged).
+  mockedUseQuery.mockImplementation((options: { queryKey: unknown[] }) => {
+    if (options.queryKey[0] === 'task-logs') {
+      return { data: [], isLoading: false } as ReturnType<typeof useQuery>;
+    }
+    return { data: MOCK_SUGGESTIONS, isLoading: false } as ReturnType<typeof useQuery>;
+  });
 
   mockedUseMutation.mockReturnValue({
     mutateAsync: mockMutateAsync,

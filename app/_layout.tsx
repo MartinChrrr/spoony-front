@@ -1,7 +1,7 @@
 import '../global.css';
 import '@/i18n';
 import { useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -22,10 +22,11 @@ function AuthGate(): React.ReactElement {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const onOnboarding = segments.some((segment) => segment === 'onboarding');
 
     if (!user && !inAuthGroup) {
       router.replace('/(auth)/login');
-    } else if (user && !hasCompletedOnboarding && segments[1] !== 'onboarding') {
+    } else if (user && !hasCompletedOnboarding && !onOnboarding) {
       router.replace('/(auth)/onboarding');
     } else if (user && hasCompletedOnboarding && inAuthGroup) {
       router.replace('/(tabs)');
@@ -33,13 +34,20 @@ function AuthGate(): React.ReactElement {
   }, [user, isLoading, hasCompletedOnboarding, segments, router]);
 
   if (isLoading) {
+    // Branded splash shown while the session is being restored.
     return (
       <View
-        className="flex-1 bg-cream items-center justify-center"
+        className="flex-1 bg-cream items-center justify-center px-8"
         accessible
         accessibilityRole="progressbar"
         accessibilityLabel={t('common.loading')}
       >
+        <Text className="text-brown-dark text-4xl font-bold mb-2" importantForAccessibility="no">
+          {t('common.appName')}
+        </Text>
+        <Text className="text-brown-dark text-base text-center mb-8" importantForAccessibility="no">
+          {t('common.tagline')}
+        </Text>
         <ActivityIndicator size="large" color={COLORS.ORANGE} importantForAccessibility="no" />
       </View>
     );

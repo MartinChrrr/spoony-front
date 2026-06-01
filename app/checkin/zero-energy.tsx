@@ -9,7 +9,7 @@ export default function ZeroEnergyScreen() {
   const router = useRouter();
   const { t } = useTranslation();
 
-  const { data: message, isLoading } = useQuery<MessageResponse>({
+  const { data: message, isLoading } = useQuery<MessageResponse | null>({
     queryKey: ['message', 'ZERO_ENERGY'],
     queryFn: async () => {
       const response = await messageEndpoints.getRandom('ZERO_ENERGY');

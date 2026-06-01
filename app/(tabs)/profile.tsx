@@ -26,6 +26,7 @@ export default function ProfileScreen(): React.ReactElement {
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [confirmText, setConfirmText] = useState('');
+  const [deleteError, setDeleteError] = useState('');
 
   const { mutateAsync: deleteAccount } = useMutation<void, Error, void>({
     mutationFn: () => userRepository.deleteAccount(),
@@ -37,21 +38,24 @@ export default function ProfileScreen(): React.ReactElement {
 
   async function handleDelete(): Promise<void> {
     if (confirmText !== confirmWord) return;
+    setDeleteError('');
     try {
       await deleteAccount();
     } catch {
-      // error is silent — handled by useMutation state
+      setDeleteError(t('profile.deleteError'));
     }
   }
 
   function openDeleteModal(): void {
     setConfirmText('');
+    setDeleteError('');
     setShowDeleteModal(true);
   }
 
   function closeDeleteModal(): void {
     setShowDeleteModal(false);
     setConfirmText('');
+    setDeleteError('');
   }
 
   return (
@@ -145,6 +149,12 @@ export default function ProfileScreen(): React.ReactElement {
               style={styles.confirmInput}
               accessibilityLabel={t('profile.deleteConfirmInputLabel')}
             />
+
+            {deleteError ? (
+              <Text style={styles.deleteErrorText} accessibilityRole="alert">
+                {deleteError}
+              </Text>
+            ) : null}
 
             <View style={styles.modalActions}>
               <Pressable
@@ -304,6 +314,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.BROWN_DARK,
     lineHeight: 20,
+  },
+  deleteErrorText: {
+    color: COLORS.ERROR,
+    fontSize: 13,
+    marginTop: 8,
   },
   confirmInput: {
     borderWidth: 1,

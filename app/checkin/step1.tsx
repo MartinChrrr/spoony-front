@@ -27,6 +27,8 @@ export default function CheckinStep1() {
 
   const { mutate: bulkPostponeMutate, isPending: isPostponing } = useMutation({
     mutationFn: () => taskLogEndpoints.bulkPostpone(),
+    // After postponing, continue the check-in flow to step 2 (was a dead end).
+    onSuccess: () => router.replace('/checkin/step2'),
   });
 
   useEffect(() => {

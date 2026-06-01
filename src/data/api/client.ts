@@ -140,7 +140,7 @@ api.interceptors.response.use(
               'ERR_REFRESH_FAILED',
             );
       if (!(refreshError instanceof AxiosError)) {
-        axiosRefreshError.cause = refreshError;
+        (axiosRefreshError as { cause?: unknown }).cause = refreshError;
       }
 
       await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);

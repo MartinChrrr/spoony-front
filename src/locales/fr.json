@@ -1,6 +1,7 @@
 {
   "common": {
     "appName": "Spoony",
+    "tagline": "Gérez votre énergie en douceur",
     "loading": "Chargement en cours",
     "back": "Retour",
     "cancel": "Annuler",
@@ -41,8 +42,8 @@
     "server": "Une erreur serveur est survenue. Réessayez plus tard."
   },
   "checkin": {
-    "step1Title": "Tâches en retard",
-    "noOverdueTasks": "Aucune tâche en retard",
+    "step1Title": "Tâches à reprendre",
+    "noOverdueTasks": "Aucune tâche à reprendre",
     "postponeOne": "Reporter",
     "postponeOneLabelled": "Reporter {{name}}",
     "postponeAll": "Tout reporter à demain",
@@ -56,12 +57,14 @@
     "presetNotToday": "Pas aujourd'hui",
     "spoonsLabel": "cuillères",
     "spoonsCount": "{{count}} cuillères",
+    "spoonCost": "{{count}} cuillère(s)",
     "spoonsSlider": "Nombre de cuillères",
     "sliderMin": "Minimum : {{min}} cuillères",
     "sliderMax": "Maximum : {{max}} cuillères",
     "decreaseSpoons": "Diminuer les cuillères",
     "increaseSpoons": "Augmenter les cuillères",
     "continue": "Continuer",
+    "saveError": "Impossible d'enregistrer votre énergie. Réessayez.",
     "step3Title": "Vos tâches du jour",
     "exceedsBudget": "Dépasse le budget",
     "spoonsUsed": "{{used}} / {{total}} cuillères utilisées",
@@ -107,7 +110,12 @@
     "taskCompleted": "{{name}} — terminée",
     "taskPending": "{{name}} — à faire",
     "taskCheckboxHint": "Appuyez pour marquer comme terminée",
-    "errorLoading": "Erreur lors du chargement"
+    "errorLoading": "Erreur lors du chargement",
+    "bravoTitle": "Bravo, tout est fait !",
+    "monthlyCompleted": "{{count}} jour(s) complétés ce mois",
+    "nudgeTitle": "C'est le moment de souffler",
+    "postponeRemaining": "Reporter les tâches à demain",
+    "restBanner": "Les tâches restantes peuvent attendre demain."
   },
   "tasks": {
     "title": "Mes tâches",
@@ -267,5 +275,36 @@
     "cancelButton": "Annuler",
     "errorSaving": "Erreur lors de la sauvegarde",
     "errorDeleting": "Erreur lors de la suppression"
+  },
+  "messages": {
+    "welcome": {
+      "return": "Content de vous revoir.",
+      "no_rush": "Rien ne presse, allez à votre rythme."
+    },
+    "rest": {
+      "listen_body": "Écoutez votre corps, il sait.",
+      "deserved": "Ce repos est mérité."
+    },
+    "completion": {
+      "celebrate": "Bravo, vous avez pris soin de vous aujourd'hui !",
+      "proud": "Soyez fier·e de ce que vous avez accompli."
+    },
+    "low_energy": {
+      "breathe": "Respirez. Une chose à la fois.",
+      "gentle": "Soyez doux·ce avec vous-même aujourd'hui."
+    },
+    "zero_energy": {
+      "comfort": "Se reposer aussi, c'est avancer.",
+      "reassurance": "Vos tâches vous attendront demain.",
+      "self_care": "Prendre soin de soi n'est jamais du temps perdu."
+    },
+    "skip": {
+      "ok": "C'est tout à fait OK de passer.",
+      "choice": "Votre choix, votre rythme."
+    },
+    "end_of_day": {
+      "enough": "Vous en avez fait assez pour aujourd'hui.",
+      "tomorrow": "On se retrouve demain, en douceur."
+    }
   }
 }

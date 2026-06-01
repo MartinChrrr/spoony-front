@@ -27,12 +27,18 @@ jest.mock('@tanstack/react-query', () => ({
     mutateAsync: mockCreateEnergyMutateAsync,
     isPending: mockCreateEnergyIsPending,
   })),
+  useQueryClient: jest.fn(() => ({ invalidateQueries: jest.fn() })),
 }));
 
 jest.mock('@/data/api/endpoints/energy', () => ({
   energyEndpoints: {
     declare: jest.fn(),
+    updateSpoons: jest.fn(),
   },
+}));
+
+jest.mock('@/data/repositories/energyRepository', () => ({
+  energyRepository: { getToday: jest.fn() },
 }));
 
 // ---------------------------------------------------------------------------

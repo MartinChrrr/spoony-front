@@ -2,9 +2,15 @@ import { useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { energyEndpoints, DeclareEnergyRequest } from '@/data/api/endpoints/energy';
+import {
+  energyEndpoints,
+  DeclareEnergyRequest,
+  UpdateSpoonsRequest,
+  EnergyResponse,
+} from '@/data/api/endpoints/energy';
+import { energyRepository } from '@/data/repositories/energyRepository';
 import { Button } from '@/components/ui/button-custom';
 import { BackButton } from '@/components/ui/BackButton';
 import { COLORS } from '@/constants/colors';
@@ -76,14 +82,40 @@ export default function CheckinStep2() {
 
   const [spoons, setSpoons] = useState<number>(DEFAULT_SPOONS);
   const [selectedPresetLabel, setSelectedPresetLabel] = useState<string>(DEFAULT_PRESET_LABEL);
+  const [submitError, setSubmitError] = useState<string>('');
 
-  const { mutateAsync: createEnergy, isPending } = useMutation<
+  const queryClient = useQueryClient();
+
+  // Whether today's energy already exists → reevaluation uses PUT, not POST.
+  const { data: todayEnergy } = useQuery<EnergyResponse | null>({
+    queryKey: ['energy', 'today'],
+    queryFn: () => energyRepository.getToday(),
+  });
+  const hasEnergyToday = todayEnergy != null;
+
+  function invalidateEnergy() {
+    queryClient.invalidateQueries({ queryKey: ['energy', 'today'] });
+  }
+
+  const { mutateAsync: createEnergy, isPending: isDeclaring } = useMutation<
     unknown,
     Error,
     DeclareEnergyRequest
   >({
     mutationFn: (data) => energyEndpoints.declare(data),
+    onSuccess: invalidateEnergy,
   });
+
+  const { mutateAsync: reviseEnergy, isPending: isRevising } = useMutation<
+    unknown,
+    Error,
+    UpdateSpoonsRequest
+  >({
+    mutationFn: (data) => energyEndpoints.updateSpoons(data),
+    onSuccess: invalidateEnergy,
+  });
+
+  const isPending = isDeclaring || isRevising;
 
   // ---- handlers ----
 
@@ -118,16 +150,21 @@ export default function CheckinStep2() {
   }
 
   async function handleContinue() {
+    setSubmitError('');
     if (spoons === 0) {
       router.replace('/checkin/zero-energy');
       return;
     }
     try {
-      await createEnergy({ spoons });
+      // Reevaluation updates today's energy (PUT); a fresh check-in declares it (POST).
+      if (hasEnergyToday) {
+        await reviseEnergy({ spoons });
+      } else {
+        await createEnergy({ spoons });
+      }
       router.replace(`/checkin/step3?spoons=${spoons}`);
     } catch {
-      // Energy declaration failed - stay on screen
-      // The error will be visible via isPending/isError state
+      setSubmitError(t('checkin.saveError'));
     }
   }
 
@@ -230,6 +267,11 @@ export default function CheckinStep2() {
 
       {/* Continue */}
       <View style={styles.footer}>
+        {submitError ? (
+          <Text style={styles.errorText} accessibilityRole="alert">
+            {submitError}
+          </Text>
+        ) : null}
         <Button
           label={t('checkin.continue')}
           onPress={handleContinue}
@@ -331,5 +373,11 @@ const styles = StyleSheet.create({
   },
   footer: {
     marginTop: 'auto',
+  },
+  errorText: {
+    color: COLORS.ERROR,
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 8,
   },
 });
