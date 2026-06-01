@@ -45,8 +45,9 @@ export default function DayDetailScreen(): React.ReactElement {
   const dateStr = Array.isArray(date) ? date[0] : (date ?? '');
 
   const { data: taskLogs = [] } = useQuery<TaskLogResponse[]>({
-    queryKey: ['task-logs'],
-    queryFn: () => taskLogRepository.getAll(),
+    queryKey: ['task-logs', 'range', dateStr, dateStr],
+    queryFn: () => taskLogRepository.getRange(dateStr, dateStr),
+    enabled: dateStr !== '',
   });
   const { data: tasks = [] } = useQuery<TaskResponse[]>({
     queryKey: ['tasks'],

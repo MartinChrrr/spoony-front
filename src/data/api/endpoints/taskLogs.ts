@@ -35,6 +35,12 @@ export const taskLogEndpoints = {
       params: includeArchived !== undefined ? { include_archived: includeArchived } : undefined,
     }),
 
+  // Logs over a date range (inclusive), for the calendar. Dates are YYYY-MM-DD.
+  getRange: (from: string, to: string) =>
+    api.get<JSendResponse<TaskLogResponse[]>>('/api/task-logs', {
+      params: { from, to },
+    }),
+
   create: (data: CreateTaskLogsRequest) =>
     api.post<JSendResponse<TaskLogResponse[]>>('/api/task-logs', data),
 

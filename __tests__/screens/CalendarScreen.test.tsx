@@ -20,11 +20,11 @@ jest.mock('@tanstack/react-query', () => ({
 }));
 
 jest.mock('@/data/repositories/taskLogRepository', () => ({
-  taskLogRepository: { getAll: jest.fn() },
+  taskLogRepository: { getAll: jest.fn(), getRange: jest.fn() },
 }));
 
-jest.mock('@/data/repositories/energyRepository', () => ({
-  energyRepository: { getToday: jest.fn() },
+jest.mock('@/data/repositories/taskRepository', () => ({
+  taskRepository: { getAll: jest.fn() },
 }));
 
 // ---------------------------------------------------------------------------
@@ -70,29 +70,25 @@ const MOCK_TASK_LOGS = [
   },
 ];
 
-const MOCK_ENERGY = {
-  id: 'energy-1',
-  date: '2026-04-10',
-  spoons: 8,
-  spoonsUsed: 3,
-  moodEnd: null,
-  createdAt: '2026-04-10T08:00:00Z',
-  updatedAt: '2026-04-10T08:00:00Z',
-};
+const MOCK_TASKS = [
+  { id: 'task-1', name: 'Boire de l’eau', spoonCost: 2, category: 'HYGIENE' },
+  { id: 'task-2', name: 'Ranger', spoonCost: 3, category: 'HOME' },
+  { id: 'task-3', name: 'Marcher', spoonCost: 1, category: 'HEALTH' },
+];
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function setupDefaultMocks() {
-  // The component calls useQuery twice (task-logs, energy). Using mockImplementation
+  // The component calls useQuery twice (task-logs range, tasks). Using mockImplementation
   // so re-renders after state changes keep returning data.
   let callIndex = 0;
   mockedUseQuery.mockImplementation(() => {
     const isTaskLogs = callIndex % 2 === 0;
     callIndex++;
     return {
-      data: isTaskLogs ? MOCK_TASK_LOGS : MOCK_ENERGY,
+      data: isTaskLogs ? MOCK_TASK_LOGS : MOCK_TASKS,
       isLoading: false,
       isError: false,
     } as ReturnType<typeof useQuery>;

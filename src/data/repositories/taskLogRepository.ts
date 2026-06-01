@@ -33,6 +33,22 @@ export const taskLogRepository = {
     }
   },
 
+  getRange: async (from: string, to: string): Promise<TaskLogResponse[]> => {
+    const cacheKey = `task-logs:range:${from}:${to}`;
+    try {
+      const response = await taskLogEndpoints.getRange(from, to);
+      const logs = response.data.data ?? [];
+      await cacheManager.set(cacheKey, logs);
+      return logs;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response !== undefined) {
+        throw error;
+      }
+      const cached = await cacheManager.get<TaskLogResponse[]>(cacheKey);
+      return cached ?? [];
+    }
+  },
+
   create: async (data: CreateTaskLogsRequest): Promise<TaskLogResponse[]> => {
     await assertOnline();
     const response = await taskLogEndpoints.create(data);
