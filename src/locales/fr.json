@@ -46,7 +46,7 @@
     "noOverdueTasks": "Aucune tâche à reprendre",
     "postponeOne": "Reporter",
     "postponeOneLabelled": "Reporter {{name}}",
-    "postponeAll": "Tout reporter à demain",
+    "postponeAll": "Reporter ces tâches",
     "skip": "Passer",
     "step2Title": "Comment vous sentez-vous ?",
     "presetsGroupLabel": "Préréglage d'énergie rapide",
@@ -73,7 +73,9 @@
     "checkboxLabelExceeds": "{{name}}, {{count}} cuillères, dépasse le budget",
     "letsGo": "C'est parti !",
     "zeroEnergyTitle": "Prenez soin de vous",
-    "zeroEnergyInfo": "Vos tâches sont automatiquement reportées",
+    "zeroEnergyInfo": "Pas de tâches aujourd'hui. On s'occupe de tout reporter, reposez-vous.",
+    "restToday": "Pas aujourd'hui",
+    "restTodayHint": "Déclarer une journée de repos et reporter toutes les tâches",
     "backToHome": "Retour à l'accueil"
   },
   "onboarding": {

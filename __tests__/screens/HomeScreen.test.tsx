@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, screen } from '@testing-library/react-native';
+import { render, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { EnergyResponse } from '@/data/api/endpoints/energy';
 import { TaskLogResponse } from '@/data/api/endpoints/taskLogs';
@@ -185,6 +185,56 @@ function renderScreen() {
 describe('HomeScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  // -------------------------------------------------------------------------
+  // 0. C2 gate — redirects to check-in when energy is null (not declared yet)
+  // -------------------------------------------------------------------------
+
+  it('should_RedirectToCheckin_When_EnergyIsNull', async () => {
+    // Arrange — first query (energy) returns null (not declared today)
+    mockedUseQuery
+      .mockReturnValueOnce({ data: null, isLoading: false, isError: false } as ReturnType<typeof useQuery>)
+      .mockReturnValue({ data: undefined, isLoading: false, isError: false } as ReturnType<typeof useQuery>);
+    mockedUseMutation.mockReturnValue({ mutateAsync: jest.fn(), isPending: false } as ReturnType<typeof useMutation>);
+
+    // Act
+    renderScreen();
+
+    // Assert
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith('/checkin/step1');
+    });
+  });
+
+  it('should_NotRedirect_When_EnergyIsLoading', async () => {
+    // Arrange — query still loading (energy is undefined, isLoading true)
+    mockedUseQuery
+      .mockReturnValueOnce({ data: undefined, isLoading: true, isError: false } as ReturnType<typeof useQuery>)
+      .mockReturnValue({ data: undefined, isLoading: false, isError: false } as ReturnType<typeof useQuery>);
+    mockedUseMutation.mockReturnValue({ mutateAsync: jest.fn(), isPending: false } as ReturnType<typeof useMutation>);
+
+    // Act
+    renderScreen();
+
+    // Assert — no redirect while loading
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mockReplace).not.toHaveBeenCalledWith('/checkin/step1');
+  });
+
+  it('should_NotRedirect_When_EnergyQueryErrors', async () => {
+    // Arrange — query errored (energy undefined, isLoading false, isError true)
+    mockedUseQuery
+      .mockReturnValueOnce({ data: undefined, isLoading: false, isError: true } as ReturnType<typeof useQuery>)
+      .mockReturnValue({ data: undefined, isLoading: false, isError: false } as ReturnType<typeof useQuery>);
+    mockedUseMutation.mockReturnValue({ mutateAsync: jest.fn(), isPending: false } as ReturnType<typeof useMutation>);
+
+    // Act
+    renderScreen();
+
+    // Assert — non-blocking: no redirect on error
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mockReplace).not.toHaveBeenCalledWith('/checkin/step1');
   });
 
   // -------------------------------------------------------------------------

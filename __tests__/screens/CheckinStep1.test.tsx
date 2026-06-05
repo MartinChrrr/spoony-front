@@ -20,6 +20,8 @@ const mockBulkPostponeMutate = jest.fn();
 let mockOverdueTasks: TaskResponse[] = [];
 let mockBulkPostponeIsPending = false;
 
+const mockInvalidateQueries = jest.fn();
+
 jest.mock('@tanstack/react-query', () => ({
   useQuery: jest.fn(() => ({
     data: mockOverdueTasks,
@@ -29,6 +31,7 @@ jest.mock('@tanstack/react-query', () => ({
     mutate: mockBulkPostponeMutate,
     isPending: mockBulkPostponeIsPending,
   })),
+  useQueryClient: jest.fn(() => ({ invalidateQueries: mockInvalidateQueries })),
 }));
 
 jest.mock('@/data/repositories/taskRepository', () => ({
@@ -154,6 +157,22 @@ describe('CheckinStep1', () => {
 
     // Act
     fireEvent.press(screen.getByText('checkin.skip'));
+
+    // Assert
+    expect(mockReplace).toHaveBeenCalledWith('/checkin/step2');
+  });
+
+  // -------------------------------------------------------------------------
+  // 5. "Pas aujourd'hui" button navigates to step2 (which will call API at 0)
+  // -------------------------------------------------------------------------
+
+  it('should_NavigateToStep2_When_RestTodayPressed', () => {
+    // Arrange
+    mockOverdueTasks = MOCK_OVERDUE_TASKS;
+    render(<CheckinStep1 />);
+
+    // Act
+    fireEvent.press(screen.getByText('checkin.restToday'));
 
     // Assert
     expect(mockReplace).toHaveBeenCalledWith('/checkin/step2');

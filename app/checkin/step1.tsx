@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { TaskResponse } from '@/data/api/endpoints/tasks';
 import { taskRepository } from '@/data/repositories/taskRepository';
@@ -14,6 +14,7 @@ import { COLORS } from '@/constants/colors';
 export default function CheckinStep1() {
   const router = useRouter();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -28,7 +29,10 @@ export default function CheckinStep1() {
   const { mutate: bulkPostponeMutate, isPending: isPostponing } = useMutation({
     mutationFn: () => taskLogEndpoints.bulkPostpone(),
     // After postponing, continue the check-in flow to step 2 (was a dead end).
-    onSuccess: () => router.replace('/checkin/step2'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-logs'] });
+      router.replace('/checkin/step2');
+    },
   });
 
   useEffect(() => {
@@ -76,6 +80,13 @@ export default function CheckinStep1() {
           label={t('checkin.skip')}
           onPress={() => router.replace('/checkin/step2')}
           variant="secondary"
+        />
+        <Button
+          label={t('checkin.restToday')}
+          onPress={() => router.replace('/checkin/step2')}
+          variant="secondary"
+          accessibilityLabel={t('checkin.restToday')}
+          accessibilityHint={t('checkin.restTodayHint')}
         />
       </View>
     </View>

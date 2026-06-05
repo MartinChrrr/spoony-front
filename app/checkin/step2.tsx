@@ -151,16 +151,18 @@ export default function CheckinStep2() {
 
   async function handleContinue() {
     setSubmitError('');
-    if (spoons === 0) {
-      router.replace('/checkin/zero-energy');
-      return;
-    }
     try {
       // Reevaluation updates today's energy (PUT); a fresh check-in declares it (POST).
       if (hasEnergyToday) {
         await reviseEnergy({ spoons });
       } else {
         await createEnergy({ spoons });
+      }
+      if (spoons === 0) {
+        // API call succeeded: navigate to zero-energy rest screen.
+        // Backend already postponed PLANNED task-logs when spoons==0.
+        router.replace('/checkin/zero-energy');
+        return;
       }
       router.replace(`/checkin/step3?spoons=${spoons}`);
     } catch {

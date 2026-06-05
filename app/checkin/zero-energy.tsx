@@ -1,13 +1,14 @@
 import { View, Text, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { messageEndpoints, MessageResponse } from '@/data/api/endpoints/messages';
 import { COLORS } from '@/constants/colors';
 
 export default function ZeroEnergyScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
 
   const { data: message, isLoading } = useQuery<MessageResponse | null>({
     queryKey: ['message', 'ZERO_ENERGY'],
@@ -55,7 +56,13 @@ export default function ZeroEnergyScreen() {
 
         <Pressable
           testID="back-to-home-button"
-          onPress={() => router.replace('/(tabs)')}
+          onPress={() => {
+            // Invalidate so the home screen gate sees the freshly declared energy
+            // and does not immediately redirect back to check-in.
+            queryClient.invalidateQueries({ queryKey: ['energy', 'today'] });
+            queryClient.invalidateQueries({ queryKey: ['task-logs'] });
+            router.replace('/(tabs)');
+          }}
           accessibilityRole="button"
           accessibilityLabel={t('checkin.backToHome')}
           style={styles.button}

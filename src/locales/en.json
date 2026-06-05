@@ -46,7 +46,7 @@
     "noOverdueTasks": "No tasks to pick up",
     "postponeOne": "Postpone",
     "postponeOneLabelled": "Postpone {{name}}",
-    "postponeAll": "Postpone all to tomorrow",
+    "postponeAll": "Postpone these tasks",
     "skip": "Skip",
     "step2Title": "How are you feeling?",
     "presetsGroupLabel": "Quick energy preset",
@@ -73,7 +73,9 @@
     "checkboxLabelExceeds": "{{name}}, {{count}} spoons, exceeds budget",
     "letsGo": "Let's go!",
     "zeroEnergyTitle": "Take care of yourself",
-    "zeroEnergyInfo": "Your tasks are automatically postponed",
+    "zeroEnergyInfo": "No tasks today. We'll take care of postponing everything — rest up.",
+    "restToday": "Not today",
+    "restTodayHint": "Declare a rest day and postpone all tasks",
     "backToHome": "Back to home"
   },
   "onboarding": {

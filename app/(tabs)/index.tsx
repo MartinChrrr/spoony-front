@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -37,10 +37,21 @@ export default function HomeScreen(): React.ReactElement {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: energy } = useQuery<EnergyResponse | null>({
+  const { data: energy, isLoading: isEnergyLoading } = useQuery<EnergyResponse | null>({
     queryKey: ['energy', 'today'],
     queryFn: () => energyRepository.getToday(),
   });
+
+  // C2: Gate — redirect to check-in if no energy has been declared yet today.
+  // Strict equality on isEnergyLoading===false avoids a spurious redirect on the
+  // very first render (where energy is undefined, not null).
+  // If the query errors, isEnergyLoading stays false but energy stays undefined →
+  // the condition is not met → no redirect (non-blocking behaviour).
+  useEffect(() => {
+    if (isEnergyLoading === false && energy === null) {
+      router.replace('/checkin/step1');
+    }
+  }, [isEnergyLoading, energy, router]);
 
   const { data: taskLogs } = useQuery<TaskLogResponse[]>({
     queryKey: ['task-logs'],

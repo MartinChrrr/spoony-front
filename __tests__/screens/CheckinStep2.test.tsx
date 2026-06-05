@@ -107,10 +107,10 @@ describe('CheckinStep2', () => {
   });
 
   // -------------------------------------------------------------------------
-  // 3. Navigate to zero-energy when 0 spoons are selected
+  // 3. Navigate to zero-energy when 0 spoons are selected (after API call)
   // -------------------------------------------------------------------------
 
-  it('should_NavigateToZeroEnergy_When_ZeroSpoonsSelected', () => {
+  it('should_NavigateToZeroEnergy_When_ZeroSpoonsSelected', async () => {
     // Arrange
     render(<CheckinStep2 />);
 
@@ -118,9 +118,31 @@ describe('CheckinStep2', () => {
     fireEvent.press(screen.getByText('checkin.presetNotToday'));
     fireEvent.press(screen.getByText('checkin.continue'));
 
-    // Assert — navigates immediately without calling createEnergy
-    expect(mockReplace).toHaveBeenCalledWith('/checkin/zero-energy');
-    expect(mockCreateEnergyMutateAsync).not.toHaveBeenCalled();
+    // Assert — API must be called BEFORE navigating (C3 fix: records energy + postpones tasks)
+    await waitFor(() => {
+      expect(mockCreateEnergyMutateAsync).toHaveBeenCalledWith({ spoons: 0 });
+      expect(mockReplace).toHaveBeenCalledWith('/checkin/zero-energy');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 3b. Does NOT navigate to zero-energy if API call fails at 0 spoons
+  // -------------------------------------------------------------------------
+
+  it('should_ShowError_When_ZeroSpoonsApiCallFails', async () => {
+    // Arrange
+    mockCreateEnergyMutateAsync.mockRejectedValueOnce(new Error('network'));
+    render(<CheckinStep2 />);
+
+    // Act
+    fireEvent.press(screen.getByText('checkin.presetNotToday'));
+    fireEvent.press(screen.getByText('checkin.continue'));
+
+    // Assert — error shown, no navigation to zero-energy
+    await waitFor(() => {
+      expect(screen.getByText('checkin.saveError')).toBeTruthy();
+    });
+    expect(mockReplace).not.toHaveBeenCalledWith('/checkin/zero-energy');
   });
 
   // -------------------------------------------------------------------------
