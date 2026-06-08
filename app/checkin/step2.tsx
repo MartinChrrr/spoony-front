@@ -2,15 +2,8 @@ import { useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import {
-  energyEndpoints,
-  DeclareEnergyRequest,
-  UpdateSpoonsRequest,
-  EnergyResponse,
-} from '@/data/api/endpoints/energy';
-import { energyRepository } from '@/data/repositories/energyRepository';
+import { useDeclareRest } from '@/features/checkin/hooks/useDeclareRest';
 import { Button } from '@/components/ui/button-custom';
 import { BackButton } from '@/components/ui/BackButton';
 import { COLORS } from '@/constants/colors';
@@ -84,38 +77,7 @@ export default function CheckinStep2() {
   const [selectedPresetLabel, setSelectedPresetLabel] = useState<string>(DEFAULT_PRESET_LABEL);
   const [submitError, setSubmitError] = useState<string>('');
 
-  const queryClient = useQueryClient();
-
-  // Whether today's energy already exists → reevaluation uses PUT, not POST.
-  const { data: todayEnergy } = useQuery<EnergyResponse | null>({
-    queryKey: ['energy', 'today'],
-    queryFn: () => energyRepository.getToday(),
-  });
-  const hasEnergyToday = todayEnergy != null;
-
-  function invalidateEnergy() {
-    queryClient.invalidateQueries({ queryKey: ['energy', 'today'] });
-  }
-
-  const { mutateAsync: createEnergy, isPending: isDeclaring } = useMutation<
-    unknown,
-    Error,
-    DeclareEnergyRequest
-  >({
-    mutationFn: (data) => energyEndpoints.declare(data),
-    onSuccess: invalidateEnergy,
-  });
-
-  const { mutateAsync: reviseEnergy, isPending: isRevising } = useMutation<
-    unknown,
-    Error,
-    UpdateSpoonsRequest
-  >({
-    mutationFn: (data) => energyEndpoints.updateSpoons(data),
-    onSuccess: invalidateEnergy,
-  });
-
-  const isPending = isDeclaring || isRevising;
+  const { declareEnergy, isPending } = useDeclareRest();
 
   // ---- handlers ----
 
@@ -152,14 +114,9 @@ export default function CheckinStep2() {
   async function handleContinue() {
     setSubmitError('');
     try {
-      // Reevaluation updates today's energy (PUT); a fresh check-in declares it (POST).
-      if (hasEnergyToday) {
-        await reviseEnergy({ spoons });
-      } else {
-        await createEnergy({ spoons });
-      }
+      // declareEnergy dispatches POST or PUT based on whether today's energy exists.
+      await declareEnergy(spoons);
       if (spoons === 0) {
-        // API call succeeded: navigate to zero-energy rest screen.
         // Backend already postponed PLANNED task-logs when spoons==0.
         router.replace('/checkin/zero-energy');
         return;

@@ -1,180 +1,283 @@
 import React from 'react';
-import { render, fireEvent, waitFor, screen } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act, screen } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TaskResponse } from '@/data/api/endpoints/tasks';
 
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockReplace = jest.fn();
-
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ replace: mockReplace }),
+  useRouter: jest.fn(() => ({ replace: jest.fn() })),
 }));
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-const mockBulkPostponeMutate = jest.fn();
-let mockOverdueTasks: TaskResponse[] = [];
-let mockBulkPostponeIsPending = false;
-
-const mockInvalidateQueries = jest.fn();
-
-jest.mock('@tanstack/react-query', () => ({
-  useQuery: jest.fn(() => ({
-    data: mockOverdueTasks,
-    isLoading: false,
-  })),
-  useMutation: jest.fn(() => ({
-    mutate: mockBulkPostponeMutate,
-    isPending: mockBulkPostponeIsPending,
-  })),
-  useQueryClient: jest.fn(() => ({ invalidateQueries: mockInvalidateQueries })),
-}));
-
 jest.mock('@/data/repositories/taskRepository', () => ({
-  taskRepository: {
-    getAll: jest.fn().mockResolvedValue([]),
-  },
+  taskRepository: { getAll: jest.fn() },
 }));
 
 jest.mock('@/data/api/endpoints/taskLogs', () => ({
-  taskLogEndpoints: {
-    bulkPostpone: jest.fn(),
-  },
+  taskLogEndpoints: { bulkPostpone: jest.fn() },
 }));
+
+jest.mock('@/features/checkin/hooks/useDeclareRest', () => ({
+  useDeclareRest: jest.fn(() => ({
+    declareRest: jest.fn().mockResolvedValue(undefined),
+    declareEnergy: jest.fn(),
+    isPending: false,
+    hasEnergyToday: false,
+  })),
+}));
+
+jest.mock('@/components/ui/BackButton', () => ({
+  BackButton: () => null,
+}));
+
+// ---------------------------------------------------------------------------
+// Imports (hoisted mocks are already registered above)
+// ---------------------------------------------------------------------------
+
+import CheckinStep1 from '../../app/checkin/step1';
+import { useRouter } from 'expo-router';
+import { taskRepository } from '@/data/repositories/taskRepository';
+import { taskLogEndpoints } from '@/data/api/endpoints/taskLogs';
+import { useDeclareRest } from '@/features/checkin/hooks/useDeclareRest';
+
+// ---------------------------------------------------------------------------
+// Typed mock references
+// ---------------------------------------------------------------------------
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockUseRouter = useRouter as jest.MockedFunction<any>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockUseDeclareRest = useDeclareRest as jest.MockedFunction<any>;
 
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
 
-const MOCK_OVERDUE_TASKS: TaskResponse[] = [
-  {
-    id: 'task-1',
-    name: 'Faire les courses',
-    spoonCost: 3,
-    importance: 'HIGH',
-    category: 'quotidien',
-    dueDate: '2026-04-04',
-    notes: null,
-    status: 'ACTIVE',
-    completedAt: null,
-    createdAt: '2026-04-01T00:00:00Z',
-    updatedAt: '2026-04-01T00:00:00Z',
-  },
-  {
-    id: 'task-2',
-    name: 'Appeler le médecin',
-    spoonCost: 2,
-    importance: 'MEDIUM',
-    category: 'santé',
-    dueDate: '2026-04-05',
-    notes: null,
-    status: 'ACTIVE',
-    completedAt: null,
-    createdAt: '2026-04-01T00:00:00Z',
-    updatedAt: '2026-04-01T00:00:00Z',
-  },
-];
+const OVERDUE_TASK: TaskResponse = {
+  id: 'task-1',
+  name: 'Faire les courses',
+  spoonCost: 3,
+  importance: 'HIGH',
+  category: 'quotidien',
+  dueDate: '2020-01-01',
+  notes: null,
+  status: 'ACTIVE',
+  completedAt: null,
+  createdAt: '2026-04-01T00:00:00Z',
+  updatedAt: '2026-04-01T00:00:00Z',
+};
+
+const OVERDUE_TASK_2: TaskResponse = {
+  id: 'task-2',
+  name: 'Appeler le médecin',
+  spoonCost: 2,
+  importance: 'MEDIUM',
+  category: 'santé',
+  dueDate: '2020-01-02',
+  notes: null,
+  status: 'ACTIVE',
+  completedAt: null,
+  createdAt: '2026-04-01T00:00:00Z',
+  updatedAt: '2026-04-01T00:00:00Z',
+};
 
 // ---------------------------------------------------------------------------
-// Subject under test (imported after mocks are in place)
+// Helpers
 // ---------------------------------------------------------------------------
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const CheckinStep1 = require('../../app/checkin/step1').default;
+function makeQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0 },
+      mutations: { retry: false },
+    },
+  });
+}
+
+function renderStep1() {
+  const queryClient = makeQueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <CheckinStep1 />
+    </QueryClientProvider>,
+  );
+}
 
 // ---------------------------------------------------------------------------
-// Tests
+// Suite
 // ---------------------------------------------------------------------------
+
+beforeEach(() => {
+  jest.clearAllMocks();
+
+  mockUseRouter.mockReturnValue({ replace: jest.fn() });
+  mockUseDeclareRest.mockReturnValue({
+    declareRest: jest.fn().mockResolvedValue(undefined),
+    declareEnergy: jest.fn(),
+    isPending: false,
+    hasEnergyToday: false,
+  });
+});
 
 describe('CheckinStep1', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockOverdueTasks = MOCK_OVERDUE_TASKS;
-    mockBulkPostponeIsPending = false;
-  });
-
   // -------------------------------------------------------------------------
-  // 1. Display overdue tasks
+  // 1. Redirect when no overdue tasks
   // -------------------------------------------------------------------------
 
-  it('should_DisplayOverdueTasks_When_TasksFromYesterday', () => {
-    // Arrange
-    mockOverdueTasks = MOCK_OVERDUE_TASKS;
+  describe('when there are no overdue tasks', () => {
+    it('should_RedirectToStep2_When_NoOverdueTasks', async () => {
+      // Arrange
+      (taskRepository.getAll as jest.Mock).mockResolvedValue([]);
+      const mockReplace = jest.fn();
+      mockUseRouter.mockReturnValue({ replace: mockReplace });
 
-    // Act
-    render(<CheckinStep1 />);
+      // Act
+      renderStep1();
 
-    // Assert
-    expect(screen.getByText('Faire les courses')).toBeTruthy();
-    expect(screen.getByText('Appeler le médecin')).toBeTruthy();
-  });
-
-  // -------------------------------------------------------------------------
-  // 2. Bulk postpone on "Tout reporter"
-  // -------------------------------------------------------------------------
-
-  it('should_CallBulkPostpone_When_ToutReporterPressed', () => {
-    // Arrange
-    mockOverdueTasks = MOCK_OVERDUE_TASKS;
-    render(<CheckinStep1 />);
-
-    // Act
-    fireEvent.press(screen.getByText('checkin.postponeAll'));
-
-    // Assert
-    expect(mockBulkPostponeMutate).toHaveBeenCalledTimes(1);
-  });
-
-  // -------------------------------------------------------------------------
-  // 3. Skip to step 2 when no overdue tasks
-  // -------------------------------------------------------------------------
-
-  it('should_SkipToStep2_When_NoOverdueTasks', async () => {
-    // Arrange
-    mockOverdueTasks = [];
-
-    // Act
-    render(<CheckinStep1 />);
-
-    // Assert
-    await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/checkin/step2');
+      // Assert
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith('/checkin/step2');
+      });
     });
   });
 
   // -------------------------------------------------------------------------
-  // 4. Navigate to step 2 on "Passer"
+  // 2. Display overdue tasks
   // -------------------------------------------------------------------------
 
-  it('should_NavigateToStep2_When_PasserPressed', () => {
-    // Arrange
-    mockOverdueTasks = MOCK_OVERDUE_TASKS;
-    render(<CheckinStep1 />);
+  describe('when there are overdue tasks', () => {
+    beforeEach(() => {
+      (taskRepository.getAll as jest.Mock).mockResolvedValue([OVERDUE_TASK, OVERDUE_TASK_2]);
+    });
 
-    // Act
-    fireEvent.press(screen.getByText('checkin.skip'));
+    it('should_DisplayOverdueTasks_When_TasksExist', async () => {
+      // Arrange / Act
+      const { findByText } = renderStep1();
 
-    // Assert
-    expect(mockReplace).toHaveBeenCalledWith('/checkin/step2');
-  });
+      // Assert
+      expect(await findByText('Faire les courses')).toBeTruthy();
+      expect(await findByText('Appeler le médecin')).toBeTruthy();
+    });
 
-  // -------------------------------------------------------------------------
-  // 5. "Pas aujourd'hui" button navigates to step2 (which will call API at 0)
-  // -------------------------------------------------------------------------
+    // -----------------------------------------------------------------------
+    // 3. Bulk postpone
+    // -----------------------------------------------------------------------
 
-  it('should_NavigateToStep2_When_RestTodayPressed', () => {
-    // Arrange
-    mockOverdueTasks = MOCK_OVERDUE_TASKS;
-    render(<CheckinStep1 />);
+    it('should_CallBulkPostpone_And_NavigateToStep2_When_PostponeAllPressed', async () => {
+      // Arrange
+      const mockReplace = jest.fn();
+      mockUseRouter.mockReturnValue({ replace: mockReplace });
+      (taskLogEndpoints.bulkPostpone as jest.Mock).mockResolvedValue({
+        data: { data: { postponedCount: 2, newDate: '2026-06-07' } },
+      });
 
-    // Act
-    fireEvent.press(screen.getByText('checkin.restToday'));
+      const { findByText } = renderStep1();
 
-    // Assert
-    expect(mockReplace).toHaveBeenCalledWith('/checkin/step2');
+      // Act
+      const postponeButton = await findByText('checkin.postponeAll');
+      await act(async () => {
+        fireEvent.press(postponeButton);
+      });
+
+      // Assert
+      await waitFor(() => {
+        expect(taskLogEndpoints.bulkPostpone).toHaveBeenCalledTimes(1);
+        expect(mockReplace).toHaveBeenCalledWith('/checkin/step2');
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // 4. Skip
+    // -----------------------------------------------------------------------
+
+    it('should_NavigateToStep2_When_SkipPressed', async () => {
+      // Arrange
+      const mockReplace = jest.fn();
+      mockUseRouter.mockReturnValue({ replace: mockReplace });
+
+      const { findByText } = renderStep1();
+
+      // Act
+      const skipButton = await findByText('checkin.skip');
+      await act(async () => {
+        fireEvent.press(skipButton);
+      });
+
+      // Assert
+      expect(mockReplace).toHaveBeenCalledWith('/checkin/step2');
+    });
+
+    // -----------------------------------------------------------------------
+    // 5. Rest today — success path
+    // -----------------------------------------------------------------------
+
+    it('should_CallApiZeroSpoons_And_NavigateToZeroEnergy_When_RestTodayPressed', async () => {
+      // Arrange
+      const mockDeclareRest = jest.fn().mockResolvedValue(undefined);
+      const mockReplace = jest.fn();
+      mockUseRouter.mockReturnValue({ replace: mockReplace });
+      mockUseDeclareRest.mockReturnValue({
+        declareRest: mockDeclareRest,
+        declareEnergy: jest.fn(),
+        isPending: false,
+        hasEnergyToday: false,
+      });
+
+      const { findByTestId } = renderStep1();
+
+      // Act
+      const restButton = await findByTestId('rest-today-button');
+      await act(async () => {
+        fireEvent.press(restButton);
+      });
+
+      // Assert — API called
+      expect(mockDeclareRest).toHaveBeenCalledTimes(1);
+
+      // Assert — navigation to zero-energy, NOT step2
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith('/checkin/zero-energy');
+      });
+      expect(mockReplace).not.toHaveBeenCalledWith('/checkin/step2');
+    });
+
+    // -----------------------------------------------------------------------
+    // 6. Rest today — API failure
+    // -----------------------------------------------------------------------
+
+    it('should_NotNavigate_And_ShowError_When_RestTodayApiFails', async () => {
+      // Arrange
+      const mockDeclareRest = jest.fn().mockRejectedValue(new Error('Network error'));
+      const mockReplace = jest.fn();
+      mockUseRouter.mockReturnValue({ replace: mockReplace });
+      mockUseDeclareRest.mockReturnValue({
+        declareRest: mockDeclareRest,
+        declareEnergy: jest.fn(),
+        isPending: false,
+        hasEnergyToday: false,
+      });
+
+      const { findByTestId, findByText } = renderStep1();
+
+      // Act
+      const restButton = await findByTestId('rest-today-button');
+      await act(async () => {
+        fireEvent.press(restButton);
+      });
+
+      // Assert — no navigation
+      await waitFor(() => {
+        expect(mockReplace).not.toHaveBeenCalled();
+      });
+
+      // Assert — error message displayed
+      expect(await findByText('checkin.saveError')).toBeTruthy();
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { TaskResponse } from '@/data/api/endpoints/tasks';
 import { taskRepository } from '@/data/repositories/taskRepository';
 import { taskLogEndpoints } from '@/data/api/endpoints/taskLogs';
+import { useDeclareRest } from '@/features/checkin/hooks/useDeclareRest';
 import { Button } from '@/components/ui/button-custom';
 import { BackButton } from '@/components/ui/BackButton';
 import { COLORS } from '@/constants/colors';
@@ -15,6 +16,8 @@ export default function CheckinStep1() {
   const router = useRouter();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+
+  const [restError, setRestError] = useState<string>('');
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -34,6 +37,18 @@ export default function CheckinStep1() {
       router.replace('/checkin/step2');
     },
   });
+
+  const { declareRest, isPending: isRestPending } = useDeclareRest();
+
+  async function handleRestToday() {
+    setRestError('');
+    try {
+      await declareRest();
+      router.replace('/checkin/zero-energy');
+    } catch {
+      setRestError(t('checkin.saveError'));
+    }
+  }
 
   useEffect(() => {
     if (!isLoading && overdueTasks.length === 0) {
@@ -71,6 +86,11 @@ export default function CheckinStep1() {
       </ScrollView>
 
       <View style={styles.footer}>
+        {restError ? (
+          <Text style={styles.errorText} accessibilityRole="alert">
+            {restError}
+          </Text>
+        ) : null}
         <Button
           label={t('checkin.postponeAll')}
           onPress={() => bulkPostponeMutate()}
@@ -82,8 +102,11 @@ export default function CheckinStep1() {
           variant="secondary"
         />
         <Button
+          testID="rest-today-button"
           label={t('checkin.restToday')}
-          onPress={() => router.replace('/checkin/step2')}
+          onPress={handleRestToday}
+          loading={isRestPending}
+          disabled={isRestPending}
           variant="secondary"
           accessibilityLabel={t('checkin.restToday')}
           accessibilityHint={t('checkin.restTodayHint')}

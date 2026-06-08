@@ -19,6 +19,7 @@ jest.mock('react-i18next', () => ({
 
 jest.mock('@tanstack/react-query', () => ({
   useQuery: jest.fn(),
+  useQueryClient: jest.fn(() => ({ invalidateQueries: jest.fn() })),
 }));
 
 jest.mock('@/data/api/endpoints/messages', () => ({
