@@ -4,6 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { taskRepository } from '@/data/repositories/taskRepository';
+import { taskLogRepository } from '@/data/repositories/taskLogRepository';
 import { Button } from '@/components/ui/button-custom';
 import { BackButton } from '@/components/ui/BackButton';
 import { useToast } from '@/components/ui/Toast';
@@ -15,6 +16,19 @@ const IMPORTANCE_OPTIONS: Importance[] = ['LOW', 'MEDIUM', 'HIGH'];
 /** Reads a single-value search param (expo-router can hand back string[]). */
 function firstParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
+}
+
+/**
+ * Today as a local YYYY-MM-DD string. We build it from local calendar parts on
+ * purpose — `new Date().toISOString()` would yield the UTC date, which drifts a
+ * day off in the evening for UTC+ users and would mis-detect "due today".
+ */
+function localTodayISO(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 function isImportance(value: string | undefined): value is Importance {
@@ -90,8 +104,24 @@ export default function TaskNewScreen() {
     if (notes.trim()) payload.notes = notes.trim();
 
     try {
-      await mutateAsync(payload);
-      toast.show(t('taskForm.added'));
+      const created = await mutateAsync(payload);
+
+      // ADR-007: when the task is due today, also create today's PLANNED log so
+      // it appears on Home (which reads ['task-logs']), not just the Tasks tab.
+      // A pure string compare avoids parsing the free-text input (no UTC drift).
+      let landedToday = false;
+      if (dueDate.trim() !== '' && dueDate.trim() === localTodayISO() && created?.id) {
+        try {
+          await taskLogRepository.createManual(created.id);
+          queryClient.invalidateQueries({ queryKey: ['task-logs'] });
+          landedToday = true;
+        } catch {
+          // The task itself was created; a failed day-log must not break the
+          // flow nor surface an anxiety-inducing error (committee decision).
+        }
+      }
+
+      toast.show(landedToday ? t('taskForm.addedToday') : t('taskForm.added'));
       // Pop the whole add-task stack (choose → form) and land on the Tasks tab.
       if (router.canDismiss?.()) {
         router.dismissAll();

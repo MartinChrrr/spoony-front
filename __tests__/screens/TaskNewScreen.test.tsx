@@ -34,6 +34,12 @@ jest.mock('@/data/repositories/taskRepository', () => ({
   taskRepository: { create: jest.fn() },
 }));
 
+const mockCreateManual = jest.fn();
+
+jest.mock('@/data/repositories/taskLogRepository', () => ({
+  taskLogRepository: { createManual: (...args: unknown[]) => mockCreateManual(...args) },
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -43,6 +49,15 @@ function renderScreen() {
   return render(<TaskNewScreen />);
 }
 
+/** Today as a local YYYY-MM-DD string — mirrors the screen's own helper. */
+function localTodayISO(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -50,7 +65,8 @@ function renderScreen() {
 describe('TaskNewScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockMutateAsync.mockResolvedValue({});
+    mockMutateAsync.mockResolvedValue({ id: 'task-1' });
+    mockCreateManual.mockResolvedValue({ id: 'log-1' });
     mockSearchParams.mockReturnValue({});
   });
 
@@ -193,5 +209,93 @@ describe('TaskNewScreen', () => {
         }),
       );
     });
+  });
+
+  // -------------------------------------------------------------------------
+  // 5. ADR-007: a task due today also creates today's log (shows on Home)
+  // -------------------------------------------------------------------------
+
+  it('should_CreateTodayLog_When_DueDateIsToday', async () => {
+    // Arrange
+    renderScreen();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('task-name-input')).toBeTruthy();
+    });
+
+    // Act — name + due date set to today
+    fireEvent.changeText(screen.getByTestId('task-name-input'), 'Tâche du jour');
+    fireEvent.press(screen.getByTestId('more-options-toggle'));
+    await waitFor(() => {
+      expect(screen.getByTestId('task-due-date-input')).toBeTruthy();
+    });
+    fireEvent.changeText(screen.getByTestId('task-due-date-input'), localTodayISO());
+    fireEvent.press(screen.getByTestId('save-task-button'));
+
+    // Assert — the task is created, then a manual log for the returned task id
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(mockCreateManual).toHaveBeenCalledWith('task-1');
+    });
+    expect(mockNavigate).toHaveBeenCalledWith('/(tabs)/tasks');
+  });
+
+  // -------------------------------------------------------------------------
+  // 6. ADR-007: a task due later (not today) does NOT create a day log
+  // -------------------------------------------------------------------------
+
+  it('should_NotCreateLog_When_DueDateIsNotToday', async () => {
+    // Arrange
+    renderScreen();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('task-name-input')).toBeTruthy();
+    });
+
+    // Act — name + a clearly future due date
+    fireEvent.changeText(screen.getByTestId('task-name-input'), 'Tâche future');
+    fireEvent.press(screen.getByTestId('more-options-toggle'));
+    await waitFor(() => {
+      expect(screen.getByTestId('task-due-date-input')).toBeTruthy();
+    });
+    fireEvent.changeText(screen.getByTestId('task-due-date-input'), '2099-12-31');
+    fireEvent.press(screen.getByTestId('save-task-button'));
+
+    // Assert — task created, navigation happened, but no day log was created
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/(tabs)/tasks');
+    });
+    expect(mockCreateManual).not.toHaveBeenCalled();
+  });
+
+  // -------------------------------------------------------------------------
+  // 7. ADR-007: a failed day-log must not break the create flow
+  // -------------------------------------------------------------------------
+
+  it('should_StillNavigate_When_DayLogFails', async () => {
+    // Arrange — the manual log call rejects
+    mockCreateManual.mockRejectedValue(new Error('network'));
+    renderScreen();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('task-name-input')).toBeTruthy();
+    });
+
+    // Act — due today so the log path is taken
+    fireEvent.changeText(screen.getByTestId('task-name-input'), 'Tâche du jour');
+    fireEvent.press(screen.getByTestId('more-options-toggle'));
+    await waitFor(() => {
+      expect(screen.getByTestId('task-due-date-input')).toBeTruthy();
+    });
+    fireEvent.changeText(screen.getByTestId('task-due-date-input'), localTodayISO());
+    fireEvent.press(screen.getByTestId('save-task-button'));
+
+    // Assert — the flow still completes (no thrown error, navigation happens)
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/(tabs)/tasks');
+    });
+    expect(mockCreateManual).toHaveBeenCalledWith('task-1');
   });
 });
