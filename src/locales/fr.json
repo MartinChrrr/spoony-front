@@ -43,6 +43,7 @@
   },
   "checkin": {
     "step1Title": "Tâches à reprendre",
+    "step1Subtitle": "Ces tâches des jours précédents vous attendent. Reprenez celles que vous voulez, reportez le reste — à votre rythme.",
     "noOverdueTasks": "Aucune tâche à reprendre",
     "postponeOne": "Reporter",
     "postponeOneLabelled": "Reporter {{name}}",
@@ -64,7 +65,7 @@
     "decreaseSpoons": "Diminuer les cuillères",
     "increaseSpoons": "Augmenter les cuillères",
     "continue": "Continuer",
-    "saveError": "Impossible d'enregistrer votre énergie. Réessayez.",
+    "saveError": "Votre énergie n'a pas été enregistrée, on réessaie.",
     "step3Title": "Vos tâches du jour",
     "exceedsBudget": "Dépasse le budget",
     "spoonsUsed": "{{used}} / {{total}} cuillères utilisées",
@@ -97,7 +98,8 @@
     "nextButton": "Suivant",
     "nextButtonHint": "Passer à l'étape suivante",
     "startButton": "Commencer",
-    "startButtonHint": "Démarrer l'application"
+    "startButtonHint": "Démarrer l'application",
+    "startError": "Le démarrage n'a pas marché, réessayez."
   },
   "home": {
     "greeting": "Bonjour {{name}}",
@@ -117,7 +119,9 @@
     "monthlyCompleted": "{{count}} jour(s) complétés ce mois",
     "nudgeTitle": "C'est le moment de souffler",
     "postponeRemaining": "Reporter les tâches à demain",
-    "restBanner": "Les tâches restantes peuvent attendre demain."
+    "restBanner": "Les tâches restantes peuvent attendre demain.",
+    "taskUpdateError": "Pas enregistré, on réessaie.",
+    "postponeError": "Le report n'a pas marché, on réessaie."
   },
   "tasks": {
     "title": "Mes tâches",
@@ -137,6 +141,15 @@
     "dueDate": "Échéance : {{date}}",
     "newTask": "Nouvelle tâche",
     "errorLoading": "Erreur lors du chargement",
+    "categories": {
+      "HYGIENE": "Hygiène",
+      "MENAGE": "Ménage",
+      "ALIMENTATION": "Alimentation",
+      "ADMINISTRATIF": "Administratif",
+      "SANTE": "Santé",
+      "SOCIAL": "Social",
+      "LOISIR": "Loisir"
+    },
     "hygiene": {
       "shower": "Se doucher",
       "brush_teeth": "Se brosser les dents",
@@ -259,6 +272,7 @@
     "dueDateLabel": "Date d'échéance",
     "dueDateHint": "Format attendu : AAAA-MM-JJ, par exemple 2026-04-15",
     "dueDatePlaceholder": "AAAA-MM-JJ",
+    "dueDateInvalid": "Date au format AAAA-MM-JJ, par exemple 2026-04-15.",
     "notesLabel": "Notes",
     "notes": "Notes",
     "notesPlaceholder": "Notes supplémentaires",

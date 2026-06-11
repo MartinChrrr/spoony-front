@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 
+import { energyRepository } from '@/data/repositories/energyRepository';
+import type { EnergyResponse } from '@/data/api/endpoints/energy';
 import { useDeclareRest } from '@/features/checkin/hooks/useDeclareRest';
 import { Button } from '@/components/ui/button-custom';
 import { BackButton } from '@/components/ui/BackButton';
@@ -79,6 +82,22 @@ export default function CheckinStep2() {
 
   const { declareEnergy, isPending } = useDeclareRest();
 
+  // N1: when re-evaluating or coming back to this step, today's energy already
+  // exists — pre-fill with the declared value instead of the default 8, so the
+  // user isn't pushed to re-validate a number they didn't choose.
+  const { data: existingEnergy } = useQuery<EnergyResponse | null>({
+    queryKey: ['energy', 'today'],
+    queryFn: () => energyRepository.getToday(),
+  });
+  const [prefilled, setPrefilled] = useState(false);
+  useEffect(() => {
+    if (prefilled || existingEnergy == null) return;
+    setSpoons(existingEnergy.spoons);
+    const matching = PRESETS.find((p) => p.spoons === existingEnergy.spoons);
+    setSelectedPresetLabel(matching ? matching.label : '');
+    setPrefilled(true);
+  }, [existingEnergy, prefilled]);
+
   // ---- handlers ----
 
   function handlePresetPress(label: string, presetSpoons: number) {
@@ -118,10 +137,12 @@ export default function CheckinStep2() {
       await declareEnergy(spoons);
       if (spoons === 0) {
         // Backend already postponed PLANNED task-logs when spoons==0.
+        // Terminal exit → replace (back must not reopen the resolved check-in).
         router.replace('/checkin/zero-energy');
         return;
       }
-      router.replace(`/checkin/step3?spoons=${spoons}`);
+      // N1: push (advance) so back returns to step 2, not the home screen.
+      router.push(`/checkin/step3?spoons=${spoons}`);
     } catch {
       setSubmitError(t('checkin.saveError'));
     }

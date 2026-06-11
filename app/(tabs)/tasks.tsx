@@ -45,6 +45,12 @@ export default function TasksScreen(): React.ReactElement {
     return Array.from(seen);
   }, [tasks]);
 
+  // N3: display-only localization of a category. Filtering still matches on the
+  // raw stored value; this only maps any legacy enum (e.g. HYGIENE) to a label
+  // (e.g. "Hygiène"), falling through unchanged for free-text categories.
+  const categoryLabel = (cat: string): string =>
+    t(`tasks.categories.${cat}`, { defaultValue: cat });
+
   const filteredAndSortedTasks = useMemo<TaskResponse[]>(() => {
     let result = tasks.filter(
       (task) =>
@@ -136,7 +142,7 @@ export default function TasksScreen(): React.ReactElement {
               selectedCategory === category && styles.filterChipActive,
             ]}
             accessibilityRole="button"
-            accessibilityLabel={t('tasks.filterCategory', { category })}
+            accessibilityLabel={t('tasks.filterCategory', { category: categoryLabel(category) })}
             accessibilityState={{ selected: selectedCategory === category }}
           >
             <Text
@@ -145,7 +151,7 @@ export default function TasksScreen(): React.ReactElement {
                 selectedCategory === category && styles.filterChipTextActive,
               ]}
             >
-              {category}
+              {categoryLabel(category)}
             </Text>
           </Pressable>
         ))}

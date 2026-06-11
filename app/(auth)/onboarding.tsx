@@ -3,6 +3,7 @@ import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useToast } from '@/components/ui/Toast';
 
 // Three-screen "Première connexion" flow teaching the spoon metaphor:
 // 1) Intro — explain the metaphor
@@ -32,17 +33,30 @@ const DEFAULT_DEMO_SPOONS = 8;
 export default function OnboardingScreen(): React.ReactElement {
   const { completeOnboarding } = useAuth();
   const { t } = useTranslation();
+  const { show: showToast } = useToast();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
   const [demoSpoons, setDemoSpoons] = useState(DEFAULT_DEMO_SPOONS);
+  // N7: loading guard so "Commencer" can't be double-tapped and a failed
+  // AsyncStorage write surfaces a message instead of silently blocking.
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const stepKey: StepKey = STEP_KEYS[currentIndex];
   const isLastStep = currentIndex === STEP_KEYS.length - 1;
-  const isNextDisabled = isLastStep && !disclaimerAccepted;
+  const isNextDisabled = (isLastStep && !disclaimerAccepted) || isSubmitting;
 
   const handleNext = async (): Promise<void> => {
     if (isLastStep) {
-      await completeOnboarding();
+      if (isSubmitting) return;
+      setIsSubmitting(true);
+      try {
+        await completeOnboarding();
+      } catch {
+        // N7: non-blaming feedback; the user stays on the screen and can retry.
+        showToast(t('onboarding.startError'));
+      } finally {
+        setIsSubmitting(false);
+      }
     } else {
       setCurrentIndex((prev) => prev + 1);
     }

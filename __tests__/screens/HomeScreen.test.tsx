@@ -58,6 +58,11 @@ jest.mock('@/data/api/endpoints/messages', () => ({
   messageEndpoints: { getRandom: jest.fn() },
 }));
 
+const mockToastShow = jest.fn();
+jest.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({ show: mockToastShow }),
+}));
+
 // ---------------------------------------------------------------------------
 // Typed mock handles
 // ---------------------------------------------------------------------------
@@ -319,6 +324,22 @@ describe('HomeScreen', () => {
     expect(mockUpdateStatusMutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'COMPLETED' }),
     );
+  });
+
+  // N7: a failed toggle must surface a non-blaming toast, not fail silently.
+  it('should_ShowToast_When_TaskToggleFails', async () => {
+    // Arrange
+    setupDefaultMocks();
+    mockUpdateStatusMutateAsync.mockRejectedValueOnce(new Error('network'));
+    renderScreen();
+
+    // Act
+    fireEvent.press(screen.getByTestId('task-log-checkbox-log-1'));
+
+    // Assert
+    await waitFor(() => {
+      expect(mockToastShow).toHaveBeenCalledWith('home.taskUpdateError');
+    });
   });
 
   // -------------------------------------------------------------------------

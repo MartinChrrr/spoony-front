@@ -43,6 +43,7 @@
   },
   "checkin": {
     "step1Title": "Tasks to pick up",
+    "step1Subtitle": "These tasks from earlier are still here. Pick up what you'd like, postpone the rest — at your pace.",
     "noOverdueTasks": "No tasks to pick up",
     "postponeOne": "Postpone",
     "postponeOneLabelled": "Postpone {{name}}",
@@ -64,7 +65,7 @@
     "decreaseSpoons": "Decrease spoons",
     "increaseSpoons": "Increase spoons",
     "continue": "Continue",
-    "saveError": "Couldn't save your energy. Please try again.",
+    "saveError": "Your energy wasn't saved, we'll try again.",
     "step3Title": "Your tasks for today",
     "exceedsBudget": "Exceeds budget",
     "spoonsUsed": "{{used}} / {{total}} spoons used",
@@ -97,7 +98,8 @@
     "nextButton": "Next",
     "nextButtonHint": "Go to the next step",
     "startButton": "Get started",
-    "startButtonHint": "Start the application"
+    "startButtonHint": "Start the application",
+    "startError": "Starting didn't go through, please try again."
   },
   "home": {
     "greeting": "Hello {{name}}",
@@ -117,7 +119,9 @@
     "monthlyCompleted": "{{count}} day(s) completed this month",
     "nudgeTitle": "Time to take a break",
     "postponeRemaining": "Postpone tasks to tomorrow",
-    "restBanner": "The remaining tasks can wait until tomorrow."
+    "restBanner": "The remaining tasks can wait until tomorrow.",
+    "taskUpdateError": "Not saved, we'll try again.",
+    "postponeError": "Postponing didn't go through, we'll try again."
   },
   "tasks": {
     "title": "My tasks",
@@ -137,6 +141,15 @@
     "dueDate": "Due: {{date}}",
     "newTask": "New task",
     "errorLoading": "Error loading data",
+    "categories": {
+      "HYGIENE": "Hygiene",
+      "MENAGE": "Household",
+      "ALIMENTATION": "Food",
+      "ADMINISTRATIF": "Admin",
+      "SANTE": "Health",
+      "SOCIAL": "Social",
+      "LOISIR": "Leisure"
+    },
     "hygiene": {
       "shower": "Take a shower",
       "brush_teeth": "Brush teeth",
@@ -259,6 +272,7 @@
     "dueDateLabel": "Due date",
     "dueDateHint": "Expected format: YYYY-MM-DD, for example 2026-04-15",
     "dueDatePlaceholder": "YYYY-MM-DD",
+    "dueDateInvalid": "Use the date format YYYY-MM-DD, for example 2026-04-15.",
     "notesLabel": "Notes",
     "notes": "Notes",
     "notesPlaceholder": "Additional notes",

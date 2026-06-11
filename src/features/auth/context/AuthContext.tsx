@@ -14,6 +14,14 @@ const STORAGE_KEYS = {
   ONBOARDING_COMPLETED: 'spoony.onboardingCompleted',
 } as const;
 
+/**
+ * M4: scope the onboarding flag per user. A global key let a second account on a
+ * shared device inherit the first user's "completed" state and skip onboarding.
+ */
+function onboardingKey(userId: string): string {
+  return `${STORAGE_KEYS.ONBOARDING_COMPLETED}.${userId}`;
+}
+
 interface JwtPayload {
   sub: string;
   type?: string;
@@ -55,7 +63,8 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
   const logout = useCallback(async (): Promise<void> => {
     await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
     await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
-    await AsyncStorage.removeItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
+    // M4: do NOT remove the per-user onboarding flag on logout — it must persist
+    // so a returning user is not asked to redo onboarding.
     await AsyncStorage.removeItem('spoony.userEmail');
     await AsyncStorage.removeItem('spoony.userFirstName');
     await cacheManager.clear();
@@ -103,10 +112,8 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
             email: storedEmail ?? '',
             firstName: storedFirstName ?? '',
           });
-          const onboardingValue = await AsyncStorage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
-          if (onboardingValue === null) {
-            setHasCompletedOnboarding(false);
-          }
+          const onboardingValue = await AsyncStorage.getItem(onboardingKey(userId));
+          setHasCompletedOnboarding(onboardingValue !== null);
         }
       } catch (error) {
         console.error('[AuthContext] Failed to restore session:', error);
@@ -136,7 +143,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
 
     await AsyncStorage.setItem('spoony.userEmail', email);
     await AsyncStorage.setItem('spoony.userFirstName', firstName);
-    const onboardingValue = await AsyncStorage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
+    const onboardingValue = await AsyncStorage.getItem(onboardingKey(userId));
     setHasCompletedOnboarding(onboardingValue !== null);
     setUser({ id: userId, email, firstName });
   };
@@ -163,7 +170,11 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
   };
 
   const completeOnboarding = async (): Promise<void> => {
-    await AsyncStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, 'true');
+    // M4: persist under the current user's scoped key so it doesn't leak across
+    // accounts on a shared device.
+    if (user !== null) {
+      await AsyncStorage.setItem(onboardingKey(user.id), 'true');
+    }
     setHasCompletedOnboarding(true);
   };
 

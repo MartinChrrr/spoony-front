@@ -32,9 +32,10 @@ export default function CheckinStep1() {
   const { mutate: bulkPostponeMutate, isPending: isPostponing } = useMutation({
     mutationFn: () => taskLogEndpoints.bulkPostpone(),
     // After postponing, continue the check-in flow to step 2 (was a dead end).
+    // N1: push (not replace) so the back button can return here from step 2.
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['task-logs'] });
-      router.replace('/checkin/step2');
+      router.push('/checkin/step2');
     },
   });
 
@@ -51,6 +52,9 @@ export default function CheckinStep1() {
   }
 
   useEffect(() => {
+    // N1: auto-forward MUST stay replace. With push, a back from step 2 would
+    // land on this empty step 1 whose effect re-forwards immediately → a loop
+    // that stacks step 2 on every back press.
     if (!isLoading && overdueTasks.length === 0) {
       router.replace('/checkin/step2');
     }
@@ -62,6 +66,12 @@ export default function CheckinStep1() {
       <Text style={styles.screenTitle} accessibilityRole="header">
         {t('checkin.step1Title')}
       </Text>
+
+      {/* N5: these tasks carry forward from previous days (no silent auto-postpone
+          job — the user decides here). The subtitle makes that explicit, gently. */}
+      {!isError && overdueTasks.length > 0 ? (
+        <Text style={styles.screenSubtitle}>{t('checkin.step1Subtitle')}</Text>
+      ) : null}
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {isError ? (
@@ -98,7 +108,8 @@ export default function CheckinStep1() {
         />
         <Button
           label={t('checkin.skip')}
-          onPress={() => router.replace('/checkin/step2')}
+          // N1: push (advance) so back returns to step 1, not the home screen.
+          onPress={() => router.push('/checkin/step2')}
           variant="secondary"
         />
         <Button
@@ -128,6 +139,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 4,
+  },
+  screenSubtitle: {
+    fontSize: 14,
+    // BROWN_DARK on CREAM ≈ 4.6:1 — passes WCAG AA
+    color: COLORS.BROWN_DARK,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    lineHeight: 20,
   },
   scrollContent: {
     padding: 16,

@@ -116,7 +116,7 @@ function renderStep1() {
 beforeEach(() => {
   jest.clearAllMocks();
 
-  mockUseRouter.mockReturnValue({ replace: jest.fn() });
+  mockUseRouter.mockReturnValue({ replace: jest.fn(), push: jest.fn() });
   mockUseDeclareRest.mockReturnValue({
     declareRest: jest.fn().mockResolvedValue(undefined),
     declareEnergy: jest.fn(),
@@ -172,7 +172,8 @@ describe('CheckinStep1', () => {
     it('should_CallBulkPostpone_And_NavigateToStep2_When_PostponeAllPressed', async () => {
       // Arrange
       const mockReplace = jest.fn();
-      mockUseRouter.mockReturnValue({ replace: mockReplace });
+      const mockPush = jest.fn();
+      mockUseRouter.mockReturnValue({ replace: mockReplace, push: mockPush });
       (taskLogEndpoints.bulkPostpone as jest.Mock).mockResolvedValue({
         data: { data: { postponedCount: 2, newDate: '2026-06-07' } },
       });
@@ -185,10 +186,10 @@ describe('CheckinStep1', () => {
         fireEvent.press(postponeButton);
       });
 
-      // Assert
+      // Assert — N1: advance uses push so back can return here
       await waitFor(() => {
         expect(taskLogEndpoints.bulkPostpone).toHaveBeenCalledTimes(1);
-        expect(mockReplace).toHaveBeenCalledWith('/checkin/step2');
+        expect(mockPush).toHaveBeenCalledWith('/checkin/step2');
       });
     });
 
@@ -199,7 +200,8 @@ describe('CheckinStep1', () => {
     it('should_NavigateToStep2_When_SkipPressed', async () => {
       // Arrange
       const mockReplace = jest.fn();
-      mockUseRouter.mockReturnValue({ replace: mockReplace });
+      const mockPush = jest.fn();
+      mockUseRouter.mockReturnValue({ replace: mockReplace, push: mockPush });
 
       const { findByText } = renderStep1();
 
@@ -209,8 +211,8 @@ describe('CheckinStep1', () => {
         fireEvent.press(skipButton);
       });
 
-      // Assert
-      expect(mockReplace).toHaveBeenCalledWith('/checkin/step2');
+      // Assert — N1: skip is an advance → push (back returns to step 1)
+      expect(mockPush).toHaveBeenCalledWith('/checkin/step2');
     });
 
     // -----------------------------------------------------------------------

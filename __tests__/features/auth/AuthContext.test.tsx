@@ -133,7 +133,8 @@ describe('AuthContext', () => {
     mockedSecureStore.getItemAsync.mockResolvedValue(MOCK_ACCESS_TOKEN);
     mockedJwtDecode.mockReturnValue(MOCK_JWT_PAYLOAD as never);
     mockedAsyncStorage.getItem.mockImplementation((key) => {
-      if (key === 'spoony.onboardingCompleted') return Promise.resolve('true');
+      // M4: onboarding flag is now scoped per userId
+      if (key === 'spoony.onboardingCompleted.user-123') return Promise.resolve('true');
       if (key === 'spoony.userEmail') return Promise.resolve('test@example.com');
       if (key === 'spoony.userFirstName') return Promise.resolve('Jean');
       return Promise.resolve(null);
@@ -251,6 +252,31 @@ describe('AuthContext', () => {
     expect(result.current.hasCompletedOnboarding).toBe(true);
   });
 
+  // M4: onboarding state is read from the user-scoped key, so another account's
+  // completed flag on the same device does not let this user skip onboarding.
+  it('should_RequireOnboarding_When_ScopedKeyMissingForThisUser', async () => {
+    // Arrange — a *different* user's flag exists, but not this user's scoped key
+    mockedAuthEndpoints.login.mockResolvedValue(MOCK_AUTH_RESPONSE as never);
+    mockedJwtDecode.mockReturnValue(MOCK_JWT_PAYLOAD as never);
+    mockedAsyncStorage.getItem.mockImplementation((key) =>
+      key === 'spoony.onboardingCompleted.someone-else'
+        ? Promise.resolve('true')
+        : Promise.resolve(null),
+    );
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    // Act
+    await act(async () => {
+      await result.current.login('test@example.com', 'password123');
+    });
+
+    // Assert — this user (user-123) has no scoped flag → must onboard
+    expect(mockedAsyncStorage.getItem).toHaveBeenCalledWith('spoony.onboardingCompleted.user-123');
+    expect(result.current.hasCompletedOnboarding).toBe(false);
+  });
+
   // -------------------------------------------------------------------------
   // 5. Logout flow
   // -------------------------------------------------------------------------
@@ -273,7 +299,10 @@ describe('AuthContext', () => {
     // Assert
     expect(mockedSecureStore.deleteItemAsync).toHaveBeenCalledWith('accessToken');
     expect(mockedSecureStore.deleteItemAsync).toHaveBeenCalledWith('refreshToken');
-    expect(mockedAsyncStorage.removeItem).toHaveBeenCalledWith('spoony.onboardingCompleted');
+    // M4: the per-user onboarding flag must survive logout (no removal).
+    expect(mockedAsyncStorage.removeItem).not.toHaveBeenCalledWith(
+      expect.stringContaining('spoony.onboardingCompleted'),
+    );
     expect(mockedCacheManager.clear).toHaveBeenCalledTimes(1);
     expect(result.current.user).toBeNull();
     expect(result.current.sessionExpired).toBe(false);
@@ -349,8 +378,8 @@ describe('AuthContext', () => {
       await result.current.completeOnboarding();
     });
 
-    // Assert
-    expect(mockedAsyncStorage.setItem).toHaveBeenCalledWith('spoony.onboardingCompleted', 'true');
+    // Assert — M4: persisted under the user-scoped key
+    expect(mockedAsyncStorage.setItem).toHaveBeenCalledWith('spoony.onboardingCompleted.user-123', 'true');
     expect(result.current.hasCompletedOnboarding).toBe(true);
   });
 

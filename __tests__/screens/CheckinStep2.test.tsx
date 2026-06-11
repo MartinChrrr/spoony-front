@@ -6,9 +6,10 @@ import { render, fireEvent, screen, waitFor } from '@testing-library/react-nativ
 // ---------------------------------------------------------------------------
 
 const mockReplace = jest.fn();
+const mockPush = jest.fn();
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ replace: mockReplace }),
+  useRouter: () => ({ replace: mockReplace, push: mockPush }),
 }));
 
 jest.mock('react-i18next', () => ({
@@ -157,9 +158,9 @@ describe('CheckinStep2', () => {
     fireEvent.press(screen.getByText('checkin.presetMedium'));
     fireEvent.press(screen.getByText('checkin.continue'));
 
-    // Assert — navigation happens after async mutation resolves
+    // Assert — N1: advancing to step 3 uses push so back returns to step 2
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith(
+      expect(mockPush).toHaveBeenCalledWith(
         expect.stringContaining('/checkin/step3?spoons='),
       );
     });

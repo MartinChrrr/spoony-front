@@ -177,6 +177,38 @@ describe('TaskNewScreen', () => {
   });
 
   // -------------------------------------------------------------------------
+  // 3b. N2: rejects a malformed due date with a field error, no backend call
+  // -------------------------------------------------------------------------
+
+  it('should_ShowDueDateError_When_DateInvalid', async () => {
+    // Arrange
+    renderScreen();
+    fireEvent.changeText(screen.getByTestId('task-name-input'), 'Tâche');
+    fireEvent.press(screen.getByTestId('more-options-toggle'));
+    await waitFor(() => {
+      expect(screen.getByTestId('task-due-date-input')).toBeTruthy();
+    });
+
+    // Act — a syntactically wrong date, then a non-existent calendar date
+    fireEvent.changeText(screen.getByTestId('task-due-date-input'), '15/04/2026');
+    fireEvent.press(screen.getByTestId('save-task-button'));
+
+    // Assert — field error shown, mutation blocked
+    await waitFor(() => {
+      expect(screen.getByText('taskForm.dueDateInvalid')).toBeTruthy();
+    });
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+
+    // A real-looking but impossible date is rejected too
+    fireEvent.changeText(screen.getByTestId('task-due-date-input'), '2026-02-30');
+    fireEvent.press(screen.getByTestId('save-task-button'));
+    await waitFor(() => {
+      expect(screen.getByText('taskForm.dueDateInvalid')).toBeTruthy();
+    });
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
+  // -------------------------------------------------------------------------
   // 4. Pre-fills the form (with "from template" badge) when opened from a model
   // -------------------------------------------------------------------------
 
@@ -198,17 +230,41 @@ describe('TaskNewScreen', () => {
     // Act — submit without changing anything else (editable, not forced)
     fireEvent.press(screen.getByTestId('save-task-button'));
 
-    // Assert — prefilled values from the template are submitted
+    // Assert — prefilled values from the template are submitted. N3: the raw
+    // category enum is localized before persisting, so it is no longer 'HYGIENE'
+    // but the resolved label (here the i18n key, since the test t() returns the
+    // key; real i18n yields "Hygiène").
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'tasks.hygiene.shower',
-          category: 'HYGIENE',
+          category: 'tasks.categories.HYGIENE',
           importance: 'MEDIUM',
           spoonCost: 2,
         }),
       );
     });
+  });
+
+  // N3: the localized category persisted from a template is never the raw enum
+  it('should_LocalizeCategory_When_OpenedFromTemplate', async () => {
+    mockSearchParams.mockReturnValue({
+      baseTaskId: 'a1',
+      templateKey: 'tasks.hygiene.shower',
+      category: 'HYGIENE',
+    });
+    renderScreen();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('from-template-badge')).toBeTruthy();
+    });
+    fireEvent.press(screen.getByTestId('save-task-button'));
+
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalled();
+    });
+    const submitted = mockMutateAsync.mock.calls[0][0];
+    expect(submitted.category).not.toBe('HYGIENE');
   });
 
   // -------------------------------------------------------------------------

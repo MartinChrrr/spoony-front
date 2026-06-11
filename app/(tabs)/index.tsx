@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,7 @@ import { taskRepository } from '@/data/repositories/taskRepository';
 import { taskLogEndpoints } from '@/data/api/endpoints/taskLogs';
 import { messageEndpoints } from '@/data/api/endpoints/messages';
 import SpoonGauge from '@/components/shared/SpoonGauge';
+import { useToast } from '@/components/ui/Toast';
 import { COLORS } from '@/constants/colors';
 import type { EnergyResponse } from '@/data/api/endpoints/energy';
 import type { TaskLogResponse } from '@/data/api/endpoints/taskLogs';
@@ -36,6 +37,12 @@ export default function HomeScreen(): React.ReactElement {
   const router = useRouter();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { show: showToast } = useToast();
+
+  // N7: guard a row against double-tap while its status update is in flight.
+  // A ref (not state) keeps it invisible — no re-render, no disabled row, so the
+  // optimistic feel stays intact for tired users; it only drops duplicate taps.
+  const inFlightLogIds = useRef<Set<string>>(new Set());
 
   const { data: energy, isLoading: isEnergyLoading } = useQuery<EnergyResponse | null>({
     queryKey: ['energy', 'today'],
@@ -176,7 +183,8 @@ export default function HomeScreen(): React.ReactElement {
               try {
                 await postponeAll();
               } catch {
-                // silent — refetch reflects the real state
+                // N7: non-blaming feedback instead of silent failure.
+                showToast(t('home.postponeError'));
               }
             }}
             disabled={isPostponing}
@@ -225,13 +233,19 @@ export default function HomeScreen(): React.ReactElement {
             accessibilityHint={t('home.taskCheckboxHint')}
             accessibilityState={{ checked: log.status === 'COMPLETED' }}
             onPress={async () => {
+              // N7: ignore re-taps on the same row while its update is in flight.
+              if (inFlightLogIds.current.has(log.id)) return;
+              inFlightLogIds.current.add(log.id);
               try {
                 await updateStatus({
                   id: log.id,
                   status: log.status === 'COMPLETED' ? 'PLANNED' : 'COMPLETED',
                 });
               } catch {
-                // status update errors are silent — the optimistic UI will revert on refetch
+                // N7: tell the user it didn't save, without blame. Refetch keeps truth.
+                showToast(t('home.taskUpdateError'));
+              } finally {
+                inFlightLogIds.current.delete(log.id);
               }
             }}
             style={styles.taskRow}

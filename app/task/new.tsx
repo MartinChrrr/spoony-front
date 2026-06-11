@@ -35,6 +35,20 @@ function isImportance(value: string | undefined): value is Importance {
   return value === 'LOW' || value === 'MEDIUM' || value === 'HIGH';
 }
 
+/**
+ * N2: validate the free-text due date client-side so an invalid entry shows a
+ * field error instead of a generic 400 "errorSaving". Checks the YYYY-MM-DD
+ * shape AND that it is a real calendar date (rejects 2026-02-30, 2026-13-01…).
+ */
+function isValidISODate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [y, m, d] = value.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  return (
+    date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d
+  );
+}
+
 export default function TaskNewScreen() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -56,7 +70,14 @@ export default function TaskNewScreen() {
   const templateSpoonCost = Number(firstParam(params.spoonCost));
 
   const [name, setName] = useState(templateKey ? t(templateKey) : '');
-  const [category, setCategory] = useState(firstParam(params.category) ?? '');
+  // N3: a template hands over the raw category enum (e.g. HYGIENE). Localize it
+  // to a free-text label (e.g. "Hygiène") so it persists consistently with
+  // manually-typed categories and the Tasks filter chips stop mixing enums and
+  // free text. Unknown/free values fall through unchanged via defaultValue.
+  const rawCategory = firstParam(params.category) ?? '';
+  const [category, setCategory] = useState(
+    rawCategory ? t(`tasks.categories.${rawCategory}`, { defaultValue: rawCategory }) : '',
+  );
   const [importance, setImportance] = useState<Importance | undefined>(
     isImportance(templateImportance) ? templateImportance : undefined,
   );
@@ -67,6 +88,7 @@ export default function TaskNewScreen() {
   const [notes, setNotes] = useState('');
   const [showMoreOptions, setShowMoreOptions] = useState(fromTemplate);
   const [nameError, setNameError] = useState('');
+  const [dueDateError, setDueDateError] = useState('');
   const [submitError, setSubmitError] = useState('');
 
   const queryClient = useQueryClient();
@@ -87,6 +109,15 @@ export default function TaskNewScreen() {
     }
 
     setNameError('');
+
+    // N2: reject a malformed date here so the user sees a field error rather
+    // than a generic save failure from the backend's 400.
+    if (dueDate.trim() !== '' && !isValidISODate(dueDate.trim())) {
+      setDueDateError(t('taskForm.dueDateInvalid'));
+      return;
+    }
+
+    setDueDateError('');
 
     const payload: {
       name: string;
@@ -289,13 +320,21 @@ export default function TaskNewScreen() {
             <TextInput
               testID="task-due-date-input"
               value={dueDate}
-              onChangeText={setDueDate}
+              onChangeText={(text) => {
+                setDueDate(text);
+                if (dueDateError) setDueDateError('');
+              }}
               accessibilityLabel={t('taskForm.dueDateLabel')}
               accessibilityHint={t('taskForm.dueDateHint')}
               style={styles.input}
               placeholder={t('taskForm.dueDatePlaceholder')}
               keyboardType="numbers-and-punctuation"
             />
+            {dueDateError ? (
+              <Text style={styles.errorText} accessibilityRole="alert">
+                {dueDateError}
+              </Text>
+            ) : null}
           </View>
 
           <View style={styles.field}>

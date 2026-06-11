@@ -18,6 +18,11 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
+const mockToastShow = jest.fn();
+jest.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({ show: mockToastShow }),
+}));
+
 describe('OnboardingScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -125,6 +130,22 @@ describe('OnboardingScreen', () => {
 
     await waitFor(() => {
       expect(mockCompleteOnboarding).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // N7: a failed AsyncStorage write must surface a non-blaming toast instead of
+  // leaving the user stuck on the screen with no feedback.
+  it('should_ShowToast_When_CompleteOnboardingFails', async () => {
+    mockCompleteOnboarding.mockRejectedValueOnce(new Error('storage'));
+    const { getByRole } = render(<OnboardingScreen />);
+    fireEvent.press(getByRole('button', { name: 'onboarding.nextButton' }));
+    fireEvent.press(getByRole('button', { name: 'onboarding.nextButton' }));
+    fireEvent.press(getByRole('checkbox', { name: 'onboarding.disclaimerCheckbox' }));
+
+    fireEvent.press(getByRole('button', { name: 'onboarding.startButton' }));
+
+    await waitFor(() => {
+      expect(mockToastShow).toHaveBeenCalledWith('onboarding.startError');
     });
   });
 });
