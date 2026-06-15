@@ -4,6 +4,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
+  ...config,
   name: "Spoonrest",
   slug: "spoonrest",
   version: "1.0.0",

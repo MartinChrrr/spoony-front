@@ -5,6 +5,9 @@ interface RegisterRequest {
   email: string;
   password: string;
   firstName: string;
+  // RGPD Art. 9 — explicit consent to processing of health/energy data.
+  // Backend rejects registration if absent or false.
+  consentGiven: boolean;
 }
 
 interface LoginRequest {

@@ -153,7 +153,9 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
     password: string,
     firstName: string,
   ): Promise<void> => {
-    const response = await authEndpoints.register({ email, password, firstName });
+    // RGPD Art. 9: the register screen gates submission on an explicit consent
+    // checkbox, so reaching this call always means consent was given.
+    const response = await authEndpoints.register({ email, password, firstName, consentGiven: true });
     const tokens = response.data.data;
     if (tokens === null) {
       throw new Error('AUTH_RESPONSE_EMPTY');

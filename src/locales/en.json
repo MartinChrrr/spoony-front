@@ -32,6 +32,8 @@
     "passwordHint": "8 characters minimum",
     "registerButton": "Sign up",
     "registerButtonHint": "Tap to create your account",
+    "consentLabel": "I understand that Spoonrest processes information about my health and energy to support me, and I consent to this.",
+    "consentHint": "Tick to give your consent and enable sign-up",
     "registerError": "An error occurred during registration",
     "emailAlreadyExists": "An account already exists with this email",
     "goToLogin": "Already have an account? Log in",

@@ -49,6 +49,8 @@ function fillValidForm(
   fireEvent.changeText(getByLabelText('auth.firstNameLabel'), 'Alice');
   fireEvent.changeText(getByLabelText('auth.emailLabel'), 'alice@example.com');
   fireEvent.changeText(getByLabelText('auth.passwordLabel'), 'password123');
+  // RGPD Art. 9: consent checkbox must be ticked to enable submission.
+  fireEvent.press(getByLabelText('auth.consentLabel'));
 }
 
 // --- Tests ---
@@ -141,6 +143,64 @@ describe('RegisterScreen', () => {
     // Assert
     const button = getByLabelText('auth.registerButton');
     expect(button.props.accessibilityState?.disabled).toBe(true);
+  });
+
+  it('should_DisableSubmit_When_ConsentNotGiven', () => {
+    // Arrange
+    const { getByLabelText } = render(<RegisterScreen />);
+
+    // Act — fill all fields but do NOT tick the consent checkbox
+    fireEvent.changeText(getByLabelText('auth.firstNameLabel'), 'Alice');
+    fireEvent.changeText(getByLabelText('auth.emailLabel'), 'alice@example.com');
+    fireEvent.changeText(getByLabelText('auth.passwordLabel'), 'password123');
+
+    // Assert — RGPD Art. 9: no consent, sign-up stays disabled
+    const button = getByLabelText('auth.registerButton');
+    expect(button.props.accessibilityState?.disabled).toBe(true);
+  });
+
+  it('should_EnableSubmit_When_ConsentGivenAndFormValid', () => {
+    // Arrange
+    const { getByLabelText } = render(<RegisterScreen />);
+
+    // Act
+    fillValidForm(getByLabelText);
+
+    // Assert
+    const button = getByLabelText('auth.registerButton');
+    expect(button.props.accessibilityState?.disabled).toBe(false);
+  });
+
+  it('should_ExposeCheckedState_When_ConsentToggled', () => {
+    // Arrange
+    const { getByLabelText } = render(<RegisterScreen />);
+    const checkbox = getByLabelText('auth.consentLabel');
+
+    // Assert — unchecked by default
+    expect(checkbox.props.accessibilityState?.checked).toBe(false);
+    expect(checkbox.props.accessibilityRole).toBe('checkbox');
+
+    // Act — tick it
+    fireEvent.press(checkbox);
+
+    // Assert — now checked
+    expect(getByLabelText('auth.consentLabel').props.accessibilityState?.checked).toBe(true);
+  });
+
+  it('should_CallRegisterWithoutExtraArgs_When_ConsentGiven', async () => {
+    // Arrange — the screen passes (email, password, firstName); consent is
+    // enforced by gating, and AuthContext adds consentGiven: true to the payload.
+    mockRegister.mockResolvedValueOnce(undefined);
+    const { getByLabelText } = render(<RegisterScreen />);
+
+    // Act
+    fillValidForm(getByLabelText);
+    fireEvent.press(getByLabelText('auth.registerButton'));
+
+    // Assert
+    await waitFor(() => {
+      expect(mockRegister).toHaveBeenCalledWith('alice@example.com', 'password123', 'Alice');
+    });
   });
 
   it('should_ShowPasswordHint_When_ScreenLoads', () => {

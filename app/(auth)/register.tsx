@@ -15,6 +15,7 @@ export default function RegisterScreen(): React.ReactElement {
   const [firstName, setFirstName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [consentGiven, setConsentGiven] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -24,7 +25,11 @@ export default function RegisterScreen(): React.ReactElement {
 
   useEffect(() => () => { isMounted.current = false; }, []);
 
-  const isValid = firstName.trim().length > 0 && isValidEmail(email.trim()) && password.length >= 8;
+  const isValid =
+    firstName.trim().length > 0 &&
+    isValidEmail(email.trim()) &&
+    password.length >= 8 &&
+    consentGiven;
 
   const handleRegister = async (): Promise<void> => {
     if (!isValid || isSubmitting) return;
@@ -144,6 +149,34 @@ export default function RegisterScreen(): React.ReactElement {
         <Text className="text-brown-dark text-sm mb-6">
           {t('auth.passwordHint')}
         </Text>
+
+        <Pressable
+          className="flex-row items-start mb-6"
+          onPress={() => setConsentGiven((prev) => !prev)}
+          disabled={isSubmitting}
+          accessible
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: consentGiven, disabled: isSubmitting }}
+          accessibilityLabel={t('auth.consentLabel')}
+          accessibilityHint={t('auth.consentHint')}
+        >
+          <View className="min-h-[44px] min-w-[44px] items-center justify-center -ml-2">
+            <View
+              className={`w-6 h-6 rounded border-2 items-center justify-center ${
+                consentGiven ? 'bg-orange border-orange' : 'bg-white border-brown-medium'
+              }`}
+            >
+              {consentGiven && (
+                <Text className="text-white text-sm font-bold" accessibilityElementsHidden>
+                  ✓
+                </Text>
+              )}
+            </View>
+          </View>
+          <Text className="flex-1 text-brown-dark text-sm pt-3 pl-1">
+            {t('auth.consentLabel')}
+          </Text>
+        </Pressable>
 
         <Pressable
           className={`min-h-[44px] rounded-lg items-center justify-center py-3 ${

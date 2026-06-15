@@ -243,6 +243,19 @@ describe('RegisterScreen accessibility', () => {
     expect(screen.getByLabelText('Email')).toBeDefined();
     expect(screen.getByLabelText('Mot de passe')).toBeDefined();
   });
+
+  it('should_ExposeConsentAsCheckbox_When_Rendered', () => {
+    // Arrange
+    const RegisterScreen = require('../../app/(auth)/register').default;
+
+    // Act
+    render(<RegisterScreen />);
+
+    // Assert — RGPD consent control is a labelled, unchecked checkbox
+    const checkbox = screen.getByLabelText('auth.consentLabel');
+    expect(checkbox.props.accessibilityRole).toBe('checkbox');
+    expect(checkbox.props.accessibilityState?.checked).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------

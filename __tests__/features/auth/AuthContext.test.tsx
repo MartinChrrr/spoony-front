@@ -336,6 +336,32 @@ describe('AuthContext', () => {
   });
 
   // -------------------------------------------------------------------------
+  // 6.5. RGPD Art. 9: register sends explicit consentGiven: true
+  // -------------------------------------------------------------------------
+
+  it('should_SendConsentGivenTrue_When_RegisterCalled', async () => {
+    // Arrange
+    mockedAuthEndpoints.register.mockResolvedValue(MOCK_AUTH_RESPONSE as never);
+    mockedJwtDecode.mockReturnValue(MOCK_JWT_PAYLOAD as never);
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    // Act
+    await act(async () => {
+      await result.current.register('test@example.com', 'password123', 'Jean');
+    });
+
+    // Assert — backend rejects registration without explicit health-data consent
+    expect(mockedAuthEndpoints.register).toHaveBeenCalledWith({
+      email: 'test@example.com',
+      password: 'password123',
+      firstName: 'Jean',
+      consentGiven: true,
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // 7. Register sets hasCompletedOnboarding=false
   // -------------------------------------------------------------------------
 
