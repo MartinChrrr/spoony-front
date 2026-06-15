@@ -11,7 +11,7 @@ import { User } from '../types';
 const STORAGE_KEYS = {
   ACCESS_TOKEN: 'accessToken',
   REFRESH_TOKEN: 'refreshToken',
-  ONBOARDING_COMPLETED: 'spoony.onboardingCompleted',
+  ONBOARDING_COMPLETED: 'spoonrest.onboardingCompleted',
 } as const;
 
 /**
@@ -65,8 +65,8 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
     await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
     // M4: do NOT remove the per-user onboarding flag on logout — it must persist
     // so a returning user is not asked to redo onboarding.
-    await AsyncStorage.removeItem('spoony.userEmail');
-    await AsyncStorage.removeItem('spoony.userFirstName');
+    await AsyncStorage.removeItem('spoonrest.userEmail');
+    await AsyncStorage.removeItem('spoonrest.userFirstName');
     await cacheManager.clear();
     setUser(null);
     setSessionExpired(false);
@@ -105,8 +105,8 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
         if (userId !== null) {
           // On restore, we don't have email/firstName from the JWT.
           // Store them in AsyncStorage at login/register so we can restore them.
-          const storedEmail = await AsyncStorage.getItem('spoony.userEmail');
-          const storedFirstName = await AsyncStorage.getItem('spoony.userFirstName');
+          const storedEmail = await AsyncStorage.getItem('spoonrest.userEmail');
+          const storedFirstName = await AsyncStorage.getItem('spoonrest.userFirstName');
           setUser({
             id: userId,
             email: storedEmail ?? '',
@@ -141,8 +141,8 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
     await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
     await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
 
-    await AsyncStorage.setItem('spoony.userEmail', email);
-    await AsyncStorage.setItem('spoony.userFirstName', firstName);
+    await AsyncStorage.setItem('spoonrest.userEmail', email);
+    await AsyncStorage.setItem('spoonrest.userFirstName', firstName);
     const onboardingValue = await AsyncStorage.getItem(onboardingKey(userId));
     setHasCompletedOnboarding(onboardingValue !== null);
     setUser({ id: userId, email, firstName });
@@ -163,8 +163,8 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
     await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
     await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
 
-    await AsyncStorage.setItem('spoony.userEmail', email);
-    await AsyncStorage.setItem('spoony.userFirstName', firstName);
+    await AsyncStorage.setItem('spoonrest.userEmail', email);
+    await AsyncStorage.setItem('spoonrest.userFirstName', firstName);
     setHasCompletedOnboarding(false);
     setUser({ id: userId, email, firstName });
   };

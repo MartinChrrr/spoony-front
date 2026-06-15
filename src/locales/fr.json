@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "Spoony",
+    "appName": "Spoonrest",
     "tagline": "Gérez votre énergie en douceur",
     "loading": "Chargement en cours",
     "back": "Retour",
@@ -80,12 +80,12 @@
     "backToHome": "Retour à l'accueil"
   },
   "onboarding": {
-    "welcomeTitle": "Bienvenue sur Spoony",
-    "welcomeDescription": "Spoony vous aide à gérer votre énergie au quotidien. Pas de jugement, juste un outil bienveillant pour vous accompagner.",
+    "welcomeTitle": "Bienvenue sur Spoonrest",
+    "welcomeDescription": "Spoonrest vous aide à gérer votre énergie au quotidien. Pas de jugement, juste un outil bienveillant pour vous accompagner.",
     "spoonsTitle": "La théorie des cuillères",
-    "spoonsDescription": "Chaque jour, vous disposez d'un nombre limité de \"cuillères\" d'énergie. Spoony vous aide à les répartir selon vos priorités et votre état du moment.",
+    "spoonsDescription": "Chaque jour, vous disposez d'un nombre limité de \"cuillères\" d'énergie. Spoonrest vous aide à les répartir selon vos priorités et votre état du moment.",
     "disclaimerTitle": "Avertissement médical",
-    "disclaimerDescription": "Spoony est un outil d'aide à l'organisation, pas un dispositif médical. Il ne remplace en aucun cas l'avis d'un professionnel de santé. Consultez votre médecin pour toute question relative à votre condition.",
+    "disclaimerDescription": "Spoonrest est un outil d'aide à l'organisation, pas un dispositif médical. Il ne remplace en aucun cas l'avis d'un professionnel de santé. Consultez votre médecin pour toute question relative à votre condition.",
     "disclaimerCheckbox": "J'ai lu et j'accepte l'avertissement médical",
     "inputTitle": "Combien de cuillères aujourd'hui ?",
     "inputDescription": "Choisissez un préréglage selon votre forme du moment.",

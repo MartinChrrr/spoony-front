@@ -134,9 +134,9 @@ describe('AuthContext', () => {
     mockedJwtDecode.mockReturnValue(MOCK_JWT_PAYLOAD as never);
     mockedAsyncStorage.getItem.mockImplementation((key) => {
       // M4: onboarding flag is now scoped per userId
-      if (key === 'spoony.onboardingCompleted.user-123') return Promise.resolve('true');
-      if (key === 'spoony.userEmail') return Promise.resolve('test@example.com');
-      if (key === 'spoony.userFirstName') return Promise.resolve('Jean');
+      if (key === 'spoonrest.onboardingCompleted.user-123') return Promise.resolve('true');
+      if (key === 'spoonrest.userEmail') return Promise.resolve('test@example.com');
+      if (key === 'spoonrest.userFirstName') return Promise.resolve('Jean');
       return Promise.resolve(null);
     });
 
@@ -202,8 +202,8 @@ describe('AuthContext', () => {
     } as never);
 
     mockedAsyncStorage.getItem.mockImplementation((key) => {
-      if (key === 'spoony.userEmail') return Promise.resolve('test@example.com');
-      if (key === 'spoony.userFirstName') return Promise.resolve('Jean');
+      if (key === 'spoonrest.userEmail') return Promise.resolve('test@example.com');
+      if (key === 'spoonrest.userFirstName') return Promise.resolve('Jean');
       return Promise.resolve(null);
     });
 
@@ -259,7 +259,7 @@ describe('AuthContext', () => {
     mockedAuthEndpoints.login.mockResolvedValue(MOCK_AUTH_RESPONSE as never);
     mockedJwtDecode.mockReturnValue(MOCK_JWT_PAYLOAD as never);
     mockedAsyncStorage.getItem.mockImplementation((key) =>
-      key === 'spoony.onboardingCompleted.someone-else'
+      key === 'spoonrest.onboardingCompleted.someone-else'
         ? Promise.resolve('true')
         : Promise.resolve(null),
     );
@@ -273,7 +273,7 @@ describe('AuthContext', () => {
     });
 
     // Assert — this user (user-123) has no scoped flag → must onboard
-    expect(mockedAsyncStorage.getItem).toHaveBeenCalledWith('spoony.onboardingCompleted.user-123');
+    expect(mockedAsyncStorage.getItem).toHaveBeenCalledWith('spoonrest.onboardingCompleted.user-123');
     expect(result.current.hasCompletedOnboarding).toBe(false);
   });
 
@@ -301,7 +301,7 @@ describe('AuthContext', () => {
     expect(mockedSecureStore.deleteItemAsync).toHaveBeenCalledWith('refreshToken');
     // M4: the per-user onboarding flag must survive logout (no removal).
     expect(mockedAsyncStorage.removeItem).not.toHaveBeenCalledWith(
-      expect.stringContaining('spoony.onboardingCompleted'),
+      expect.stringContaining('spoonrest.onboardingCompleted'),
     );
     expect(mockedCacheManager.clear).toHaveBeenCalledTimes(1);
     expect(result.current.user).toBeNull();
@@ -379,7 +379,7 @@ describe('AuthContext', () => {
     });
 
     // Assert — M4: persisted under the user-scoped key
-    expect(mockedAsyncStorage.setItem).toHaveBeenCalledWith('spoony.onboardingCompleted.user-123', 'true');
+    expect(mockedAsyncStorage.setItem).toHaveBeenCalledWith('spoonrest.onboardingCompleted.user-123', 'true');
     expect(result.current.hasCompletedOnboarding).toBe(true);
   });
 

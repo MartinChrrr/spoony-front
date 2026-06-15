@@ -4,8 +4,8 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
-  name: "Spoony",
-  slug: "spoony",
+  name: "Spoonrest",
+  slug: "spoonrest",
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
@@ -17,18 +17,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   ios: {
     supportsTablet: true,
-    bundleIdentifier: "com.spoony.app",
+    bundleIdentifier: "com.spoonrest.app",
   },
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/images/adaptive-icon.png",
       backgroundColor: "#F7F0E8",
     },
-    package: "com.spoony.app",
+    package: "com.spoonrest.app",
   },
-  scheme: "spoony",
+  scheme: "spoonrest",
   extra: {
     apiBaseUrl: process.env.API_BASE_URL ?? 'http://localhost:8080',
-    privacyPolicyUrl: 'https://spoony-app.com/privacy',
+    privacyPolicyUrl: 'https://spoonrest.app/privacy',
   },
 });

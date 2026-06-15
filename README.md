@@ -1,4 +1,4 @@
-# Spoony Frontend
+# Spoonrest Frontend
 
 Application mobile de gestion du quotidien basee sur la theorie des cuilleres.
 

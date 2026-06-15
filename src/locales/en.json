@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "Spoony",
+    "appName": "Spoonrest",
     "tagline": "Manage your energy, gently",
     "loading": "Loading",
     "back": "Back",
@@ -80,12 +80,12 @@
     "backToHome": "Back to home"
   },
   "onboarding": {
-    "welcomeTitle": "Welcome to Spoony",
-    "welcomeDescription": "Spoony helps you manage your daily energy. No judgement, just a caring tool to support you.",
+    "welcomeTitle": "Welcome to Spoonrest",
+    "welcomeDescription": "Spoonrest helps you manage your daily energy. No judgement, just a caring tool to support you.",
     "spoonsTitle": "The Spoon Theory",
-    "spoonsDescription": "Each day, you have a limited number of energy \"spoons\". Spoony helps you allocate them based on your priorities and how you feel.",
+    "spoonsDescription": "Each day, you have a limited number of energy \"spoons\". Spoonrest helps you allocate them based on your priorities and how you feel.",
     "disclaimerTitle": "Medical Disclaimer",
-    "disclaimerDescription": "Spoony is an organizational tool, not a medical device. It does not replace professional medical advice. Consult your doctor for any questions about your condition.",
+    "disclaimerDescription": "Spoonrest is an organizational tool, not a medical device. It does not replace professional medical advice. Consult your doctor for any questions about your condition.",
     "disclaimerCheckbox": "I have read and accept the medical disclaimer",
     "inputTitle": "How many spoons today?",
     "inputDescription": "Pick a preset based on how you feel right now.",

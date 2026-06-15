@@ -16,7 +16,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import { userRepository } from '@/data/repositories/userRepository';
 import { COLORS } from '@/constants/colors';
 
-const PRIVACY_POLICY_URL = 'https://spoony.app/privacy-policy';
+const PRIVACY_POLICY_URL = 'https://spoonrest.app/privacy';
 
 export default function ProfileScreen(): React.ReactElement {
   const { t } = useTranslation();
