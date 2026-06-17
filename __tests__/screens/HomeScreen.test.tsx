@@ -369,6 +369,8 @@ describe('HomeScreen', () => {
       .mockReturnValueOnce({ data: { ...MOCK_ENERGY, spoons: 8, spoonsUsed: 5 }, isLoading: false, isError: false } as ReturnType<typeof useQuery>)
       .mockReturnValueOnce({ data: allDoneLogs, isLoading: false, isError: false } as ReturnType<typeof useQuery>)
       .mockReturnValueOnce({ data: MOCK_TASKS, isLoading: false, isError: false } as ReturnType<typeof useQuery>)
+      // 4th query: monthly range for the Bravo cumulative count (must be an array)
+      .mockReturnValueOnce({ data: allDoneLogs, isLoading: false, isError: false } as ReturnType<typeof useQuery>)
       .mockReturnValue({ data: { id: 'm1', key: 'messages.completion.celebrate', context: 'COMPLETION' }, isLoading: false, isError: false } as ReturnType<typeof useQuery>);
     mockedUseMutation.mockReturnValue({ mutateAsync: jest.fn(), isPending: false } as ReturnType<typeof useMutation>);
 
@@ -390,6 +392,8 @@ describe('HomeScreen', () => {
       .mockReturnValueOnce({ data: { ...MOCK_ENERGY, spoons: 8, spoonsUsed: 7 }, isLoading: false, isError: false } as ReturnType<typeof useQuery>)
       .mockReturnValueOnce({ data: MOCK_TASK_LOGS, isLoading: false, isError: false } as ReturnType<typeof useQuery>)
       .mockReturnValueOnce({ data: MOCK_TASKS, isLoading: false, isError: false } as ReturnType<typeof useQuery>)
+      // 4th query: monthly range for the Bravo cumulative count (must be an array)
+      .mockReturnValueOnce({ data: MOCK_TASK_LOGS, isLoading: false, isError: false } as ReturnType<typeof useQuery>)
       .mockReturnValue({ data: { id: 'm2', key: 'messages.low_energy.breathe', context: 'LOW_ENERGY' }, isLoading: false, isError: false } as ReturnType<typeof useQuery>);
     mockedUseMutation.mockReturnValue({ mutateAsync: jest.fn(), isPending: false } as ReturnType<typeof useMutation>);
 

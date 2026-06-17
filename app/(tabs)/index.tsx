@@ -32,6 +32,17 @@ interface UpdateStatusArgs {
   status: TaskLogStatus;
 }
 
+// Local-date YYYY-MM-DD (no UTC). Mirrors localTodayISO() in app/task/new.tsx;
+// kept inline because that helper is module-private there. See ADR-007 note:
+// month boundaries must be computed in local time to avoid timezone drift that
+// would mis-bucket end-of-month logs (the P1.3 bug).
+function localDateISO(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 export default function HomeScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
@@ -108,15 +119,31 @@ export default function HomeScreen(): React.ReactElement {
     return null;
   }, [totalCount, incompleteCount, energy, spoonsRemaining]);
 
+  // Monthly cumulative bounds, computed in LOCAL time to avoid UTC drift at
+  // month edges (the P1.3 bug: toISOString() bucketed evening logs into the
+  // wrong month). from = 1st of this month, to = today (inclusive). We stop at
+  // today because future days can't be COMPLETED and we don't want to pull
+  // PLANNED logs ahead of time.
+  const now = new Date();
+  const monthFrom = localDateISO(new Date(now.getFullYear(), now.getMonth(), 1));
+  const monthTo = localDateISO(now);
+
+  // Dedicated query for the month range — getAll() only carries the current
+  // window and structurally capped the cumulative count. getRange is built for
+  // exactly this (inclusive YYYY-MM-DD bounds).
+  const { data: monthLogs } = useQuery<TaskLogResponse[]>({
+    queryKey: ['task-logs', 'range', monthFrom, monthTo],
+    queryFn: () => taskLogRepository.getRange(monthFrom, monthTo),
+  });
+
   // Monthly cumulative: distinct days this month with at least one completed task.
   const monthlyCompletedDays = useMemo(() => {
-    const prefix = new Date().toISOString().slice(0, 7); // YYYY-MM
     const days = new Set<string>();
-    (taskLogs ?? []).forEach((log) => {
-      if (log.status === 'COMPLETED' && log.date.startsWith(prefix)) days.add(log.date);
+    (monthLogs ?? []).forEach((log) => {
+      if (log.status === 'COMPLETED') days.add(log.date);
     });
     return days.size;
-  }, [taskLogs]);
+  }, [monthLogs]);
 
   const restContext = restLevel ? REST_CONTEXT[restLevel] : null;
   const { data: restMessage } = useQuery<MessageResponse | null>({
