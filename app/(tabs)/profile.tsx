@@ -8,6 +8,7 @@ import {
   TextInput,
   StyleSheet,
   Linking,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -44,6 +45,27 @@ export default function ProfileScreen(): React.ReactElement {
     } catch {
       setDeleteError(t('profile.deleteError'));
     }
+  }
+
+  async function performLogout(): Promise<void> {
+    // logout() always purges local credentials, even if the server call fails,
+    // so we navigate to the auth stack regardless.
+    await logout();
+    router.replace('/(auth)' as never);
+  }
+
+  function handleLogoutPress(): void {
+    Alert.alert(
+      t('profile.logoutConfirmTitle'),
+      t('profile.logoutConfirmMessage'),
+      [
+        { text: t('profile.cancelButton'), style: 'cancel' },
+        {
+          text: t('profile.logout'),
+          onPress: () => void performLogout(),
+        },
+      ],
+    );
   }
 
   function openDeleteModal(): void {
@@ -103,6 +125,20 @@ export default function ProfileScreen(): React.ReactElement {
         >
           <Text style={styles.linkText}>{t('profile.privacyPolicy')}</Text>
           <Text style={styles.linkChevron}>{'>'}</Text>
+        </Pressable>
+
+        {/* ---------------------------------------------------------------- */}
+        {/* Logout button                                                     */}
+        {/* ---------------------------------------------------------------- */}
+        <Pressable
+          testID="logout-button"
+          onPress={handleLogoutPress}
+          style={styles.logoutButton}
+          accessibilityRole="button"
+          accessibilityLabel={t('profile.logout')}
+          accessibilityHint={t('profile.logoutHint')}
+        >
+          <Text style={styles.logoutButtonText}>{t('profile.logout')}</Text>
         </Pressable>
 
         {/* ---------------------------------------------------------------- */}
@@ -267,6 +303,24 @@ const styles = StyleSheet.create({
     // BROWN_DARK (#6B5744) on WHITE (#FFFFFF) — contrast ≈ 7.2:1, passes WCAG AA
     // BROWN_MEDIUM (#8B7355) was only ≈ 4.0:1 — fails for 16dp normal weight text
     color: COLORS.BROWN_DARK,
+  },
+
+  // Logout button (secondary, non-destructive)
+  logoutButton: {
+    minHeight: 52,
+    borderRadius: 12,
+    backgroundColor: COLORS.WHITE,
+    borderWidth: 1,
+    borderColor: COLORS.ORANGE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    paddingHorizontal: 16,
+  },
+  logoutButtonText: {
+    color: COLORS.ORANGE,
+    fontSize: 16,
+    fontWeight: '700',
   },
 
   // Delete button

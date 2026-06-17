@@ -242,7 +242,11 @@
     "deleteConfirmButtonHint": "Confirme la suppression définitive du compte",
     "deleteConfirmInputLabel": "Confirmation de suppression",
     "cancelButton": "Annuler",
-    "deleteError": "La suppression n'a pas marché, on réessaie."
+    "deleteError": "La suppression n'a pas marché, on réessaie.",
+    "logout": "Se déconnecter",
+    "logoutHint": "Vous déconnecte de l'application",
+    "logoutConfirmTitle": "Se déconnecter ?",
+    "logoutConfirmMessage": "Vous pourrez vous reconnecter à tout moment."
   },
   "offline": {
     "banner": "Mode hors ligne",

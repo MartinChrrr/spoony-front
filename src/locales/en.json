@@ -242,7 +242,11 @@
     "deleteConfirmButtonHint": "Confirms permanent account deletion",
     "deleteConfirmInputLabel": "Deletion confirmation",
     "cancelButton": "Cancel",
-    "deleteError": "That didn't go through — let's try again."
+    "deleteError": "That didn't go through — let's try again.",
+    "logout": "Log out",
+    "logoutHint": "Logs you out of the app",
+    "logoutConfirmTitle": "Log out?",
+    "logoutConfirmMessage": "You can log back in anytime."
   },
   "offline": {
     "banner": "Offline mode",

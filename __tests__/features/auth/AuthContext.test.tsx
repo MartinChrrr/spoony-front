@@ -33,6 +33,7 @@ jest.mock('@/data/api/endpoints/auth', () => ({
     login: jest.fn(),
     register: jest.fn(),
     refresh: jest.fn(),
+    logout: jest.fn(),
   },
 }));
 
@@ -107,6 +108,7 @@ describe('AuthContext', () => {
     mockedAsyncStorage.setItem.mockResolvedValue();
     mockedAsyncStorage.removeItem.mockResolvedValue();
     mockedCacheManager.clear.mockResolvedValue();
+    mockedAuthEndpoints.logout.mockResolvedValue(undefined as never);
   });
 
   // -------------------------------------------------------------------------
@@ -297,6 +299,8 @@ describe('AuthContext', () => {
     });
 
     // Assert
+    // Server-side refresh-token revocation is attempted before the local purge.
+    expect(mockedAuthEndpoints.logout).toHaveBeenCalledTimes(1);
     expect(mockedSecureStore.deleteItemAsync).toHaveBeenCalledWith('accessToken');
     expect(mockedSecureStore.deleteItemAsync).toHaveBeenCalledWith('refreshToken');
     // M4: the per-user onboarding flag must survive logout (no removal).
@@ -306,6 +310,32 @@ describe('AuthContext', () => {
     expect(mockedCacheManager.clear).toHaveBeenCalledTimes(1);
     expect(result.current.user).toBeNull();
     expect(result.current.sessionExpired).toBe(false);
+  });
+
+  // Shared aidant/aidé device: local credentials must be wiped even when the
+  // server logout call fails (offline, expired session, server error).
+  it('should_PurgeLocalTokensAndClearUser_When_LogoutEndpointFails', async () => {
+    // Arrange: start with a logged-in user, but the server call rejects
+    mockedSecureStore.getItemAsync.mockResolvedValue(MOCK_ACCESS_TOKEN);
+    mockedJwtDecode.mockReturnValue(MOCK_JWT_PAYLOAD as never);
+    mockedAsyncStorage.getItem.mockResolvedValue('true');
+    mockedAuthEndpoints.logout.mockRejectedValue(new Error('Network Error'));
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.user).not.toBeNull();
+
+    // Act — should not throw despite the rejected endpoint
+    await act(async () => {
+      await result.current.logout();
+    });
+
+    // Assert — local purge happened regardless of the failed server call
+    expect(mockedAuthEndpoints.logout).toHaveBeenCalledTimes(1);
+    expect(mockedSecureStore.deleteItemAsync).toHaveBeenCalledWith('accessToken');
+    expect(mockedSecureStore.deleteItemAsync).toHaveBeenCalledWith('refreshToken');
+    expect(mockedCacheManager.clear).toHaveBeenCalledTimes(1);
+    expect(result.current.user).toBeNull();
   });
 
   // -------------------------------------------------------------------------

@@ -61,6 +61,14 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(true);
 
   const logout = useCallback(async (): Promise<void> => {
+    // Revoke the refresh token server-side first. On a shared aidant/aidé device
+    // we must still wipe local credentials even if this call fails (no network,
+    // already-expired session, server error), so we never let it block the purge.
+    try {
+      await authEndpoints.logout();
+    } catch {
+      // Swallow: local purge below is the security-critical step.
+    }
     await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
     await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
     // M4: do NOT remove the per-user onboarding flag on logout — it must persist

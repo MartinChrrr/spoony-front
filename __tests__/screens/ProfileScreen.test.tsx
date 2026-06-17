@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, screen, waitFor } from '@testing-library/react-native';
-import { Linking } from 'react-native';
+import { Alert, Linking } from 'react-native';
 import { useMutation } from '@tanstack/react-query';
 
 // ---------------------------------------------------------------------------
@@ -19,7 +19,7 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-const mockLogout = jest.fn();
+const mockLogout = jest.fn().mockResolvedValue(undefined);
 const mockUser = {
   id: 'user-1',
   email: 'marie@example.com',
@@ -155,5 +155,67 @@ describe('ProfileScreen', () => {
     await waitFor(() => {
       expect(mockDeleteMutateAsync).toHaveBeenCalled();
     });
+  });
+
+  // -------------------------------------------------------------------------
+  // 5. Logout button is rendered and accessible
+  // -------------------------------------------------------------------------
+
+  it('should_RenderLogoutButton_When_ScreenLoads', () => {
+    // Arrange
+    setupDefaultMocks();
+    renderScreen();
+
+    // Assert
+    expect(screen.getByTestId('logout-button')).toBeTruthy();
+  });
+
+  // -------------------------------------------------------------------------
+  // 6. Logout + navigate to auth stack once confirmation is accepted
+  // -------------------------------------------------------------------------
+
+  it('should_LogoutAndNavigate_When_LogoutConfirmed', async () => {
+    // Arrange — auto-confirm the Alert by invoking its confirm button
+    setupDefaultMocks();
+    const alertSpy = jest
+      .spyOn(Alert, 'alert')
+      .mockImplementation((_title, _message, buttons) => {
+        // buttons[0] = cancel, buttons[1] = confirm
+        buttons?.[1]?.onPress?.();
+      });
+    renderScreen();
+
+    // Act
+    fireEvent.press(screen.getByTestId('logout-button'));
+
+    // Assert — endpoint+purge handled by AuthContext.logout, then we navigate
+    expect(alertSpy).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockLogout).toHaveBeenCalledTimes(1);
+    });
+    expect(mockReplace).toHaveBeenCalledWith('/(auth)');
+
+    alertSpy.mockRestore();
+  });
+
+  // -------------------------------------------------------------------------
+  // 7. Logout does NOT fire when the confirmation is cancelled
+  // -------------------------------------------------------------------------
+
+  it('should_NotLogout_When_ConfirmationCancelled', () => {
+    // Arrange — simulate the user tapping cancel (no onPress invoked)
+    setupDefaultMocks();
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    renderScreen();
+
+    // Act
+    fireEvent.press(screen.getByTestId('logout-button'));
+
+    // Assert
+    expect(alertSpy).toHaveBeenCalled();
+    expect(mockLogout).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+
+    alertSpy.mockRestore();
   });
 });

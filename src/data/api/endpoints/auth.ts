@@ -35,4 +35,10 @@ export const authEndpoints = {
 
   refresh: (data: RefreshRequest) =>
     api.post<JSendResponse<AuthResponse>>('/api/auth/refresh', data),
+
+  // Revokes the refresh token server-side. Authenticated via the access token
+  // (attached by the request interceptor). Backend replies 204 No Content.
+  // The access token stays valid until expiry (stateless JWT), so the caller
+  // MUST purge local tokens after this call.
+  logout: () => api.post<void>('/api/auth/logout'),
 };
