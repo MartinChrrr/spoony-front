@@ -3,6 +3,7 @@
     "appName": "Spoonrest",
     "tagline": "Manage your energy, gently",
     "loading": "Loading",
+    "error": "That didn't load — let's try again.",
     "back": "Back",
     "cancel": "Cancel",
     "offlineBanner": "No connection. Your data is here, but you cannot modify it."
@@ -116,7 +117,7 @@
     "taskCompleted": "{{name}} — completed",
     "taskPending": "{{name}} — pending",
     "taskCheckboxHint": "Tap to mark as completed",
-    "errorLoading": "Error loading data",
+    "errorLoading": "That didn't load — let's try again.",
     "bravoTitle": "All done!",
     "monthlyCompleted": "{{count}} day(s) completed this month",
     "nudgeTitle": "Time to take a break",
@@ -128,7 +129,7 @@
   "tasks": {
     "title": "My tasks",
     "loading": "Loading tasks",
-    "error": "Error loading tasks",
+    "error": "That didn't load — let's try again.",
     "filterBar": "Filter by category",
     "filterAll": "All",
     "filterCategory": "Filter by {{category}}",
@@ -142,7 +143,7 @@
     "spoonCost": "{{count}} spoon(s)",
     "dueDate": "Due: {{date}}",
     "newTask": "New task",
-    "errorLoading": "Error loading data",
+    "errorLoading": "That didn't load — let's try again.",
     "categories": {
       "HYGIENE": "Hygiene",
       "MENAGE": "Household",
@@ -217,7 +218,7 @@
     "submitSelection": "Add selection",
     "noTemplates": "No templates available",
     "loading": "Loading templates",
-    "error": "Error loading templates",
+    "error": "That didn't load — let's try again.",
     "successMessage": "Tasks added successfully",
     "selectHint": "Tap to select this template task",
     "chooseTitle": "Choose a template",
@@ -241,7 +242,7 @@
     "deleteConfirmButtonHint": "Confirms permanent account deletion",
     "deleteConfirmInputLabel": "Deletion confirmation",
     "cancelButton": "Cancel",
-    "deleteError": "Error deleting account"
+    "deleteError": "That didn't go through — let's try again."
   },
   "offline": {
     "banner": "Offline mode",
@@ -292,8 +293,8 @@
     "deleteConfirmButton": "Delete",
     "confirmDelete": "Delete",
     "cancelButton": "Cancel",
-    "errorSaving": "Error saving",
-    "errorDeleting": "Error deleting"
+    "errorSaving": "Not saved — let's try again.",
+    "errorDeleting": "Not deleted — let's try again."
   },
   "messages": {
     "welcome": {

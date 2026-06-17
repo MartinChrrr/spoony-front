@@ -3,6 +3,7 @@
     "appName": "Spoonrest",
     "tagline": "Gérez votre énergie en douceur",
     "loading": "Chargement en cours",
+    "error": "Le chargement n'a pas marché, on réessaie.",
     "back": "Retour",
     "cancel": "Annuler",
     "offlineBanner": "Pas de connexion. Vos données sont là, mais vous ne pouvez pas les modifier."
@@ -116,7 +117,7 @@
     "taskCompleted": "{{name}} — terminée",
     "taskPending": "{{name}} — à faire",
     "taskCheckboxHint": "Appuyez pour marquer comme terminée",
-    "errorLoading": "Erreur lors du chargement",
+    "errorLoading": "Le chargement n'a pas marché, on réessaie.",
     "bravoTitle": "Bravo, tout est fait !",
     "monthlyCompleted": "{{count}} jour(s) complétés ce mois",
     "nudgeTitle": "C'est le moment de souffler",
@@ -128,7 +129,7 @@
   "tasks": {
     "title": "Mes tâches",
     "loading": "Chargement des tâches",
-    "error": "Erreur lors du chargement des tâches",
+    "error": "Le chargement n'a pas marché, on réessaie.",
     "filterBar": "Filtrer par catégorie",
     "filterAll": "Toutes",
     "filterCategory": "Filtrer par {{category}}",
@@ -142,7 +143,7 @@
     "spoonCost": "{{count}} cuillère(s)",
     "dueDate": "Échéance : {{date}}",
     "newTask": "Nouvelle tâche",
-    "errorLoading": "Erreur lors du chargement",
+    "errorLoading": "Le chargement n'a pas marché, on réessaie.",
     "categories": {
       "HYGIENE": "Hygiène",
       "MENAGE": "Ménage",
@@ -217,7 +218,7 @@
     "submitSelection": "Ajouter la sélection",
     "noTemplates": "Aucun modèle disponible",
     "loading": "Chargement des modèles",
-    "error": "Erreur lors du chargement des modèles",
+    "error": "Le chargement n'a pas marché, on réessaie.",
     "successMessage": "Tâches ajoutées avec succès",
     "selectHint": "Appuyez pour sélectionner cette tâche modèle",
     "chooseTitle": "Choisir un modèle",
@@ -241,7 +242,7 @@
     "deleteConfirmButtonHint": "Confirme la suppression définitive du compte",
     "deleteConfirmInputLabel": "Confirmation de suppression",
     "cancelButton": "Annuler",
-    "deleteError": "Erreur lors de la suppression du compte"
+    "deleteError": "La suppression n'a pas marché, on réessaie."
   },
   "offline": {
     "banner": "Mode hors ligne",
@@ -292,8 +293,8 @@
     "deleteConfirmButton": "Supprimer",
     "confirmDelete": "Supprimer",
     "cancelButton": "Annuler",
-    "errorSaving": "Erreur lors de la sauvegarde",
-    "errorDeleting": "Erreur lors de la suppression"
+    "errorSaving": "Pas enregistré, on réessaie.",
+    "errorDeleting": "Pas supprimé, on réessaie."
   },
   "messages": {
     "welcome": {
