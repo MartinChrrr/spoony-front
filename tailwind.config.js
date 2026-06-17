@@ -12,7 +12,7 @@ module.exports = {
         "brown-dark": "#6B5744",
         "brown-medium": "#8B7355",
         "brown-light": "#C4B5A0",
-        orange: "#C45E08",
+        orange: "#A85000",
         "orange-light": "#FFAB5C",
         white: "#FFFFFF",
         error: "#C62828",

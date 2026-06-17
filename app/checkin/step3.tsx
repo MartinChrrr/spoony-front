@@ -272,7 +272,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   taskRowExceeds: {
-    opacity: 0.6,
+    backgroundColor: '#F5EDE4',
+    borderWidth: 1,
+    borderColor: COLORS.BROWN_LIGHT,
   },
   checkbox: {
     width: 24,

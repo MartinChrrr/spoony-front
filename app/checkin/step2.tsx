@@ -41,6 +41,8 @@ function SpoonSlider({
   testID,
   accessibilityLabel,
   accessibilityValue,
+  onIncrement,
+  onDecrement,
 }: {
   value: number;
   onValueChange: (v: number) => void;
@@ -49,6 +51,8 @@ function SpoonSlider({
   testID?: string;
   accessibilityLabel?: string;
   accessibilityValue?: { min: number; max: number; now: number };
+  onIncrement: () => void;
+  onDecrement: () => void;
 }) {
   return (
     <View
@@ -57,6 +61,11 @@ function SpoonSlider({
       accessibilityRole="adjustable"
       accessibilityLabel={accessibilityLabel}
       accessibilityValue={accessibilityValue}
+      accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+      onAccessibilityAction={(event) => {
+        if (event.nativeEvent.actionName === 'increment') onIncrement();
+        else if (event.nativeEvent.actionName === 'decrement') onDecrement();
+      }}
       // Expose props so RNTL can read them and fireEvent can reach handlers
       // @ts-ignore — non-standard props intentionally passed for testability
       value={value}
@@ -216,6 +225,8 @@ export default function CheckinStep2() {
           maximumValue={SLIDER_MAX}
           accessibilityLabel={t('checkin.spoonsSlider')}
           accessibilityValue={{ min: SLIDER_MIN, max: SLIDER_MAX, now: spoons }}
+          onIncrement={handleIncrement}
+          onDecrement={handleDecrement}
         />
         <Text
           style={styles.sliderLabel}
@@ -341,7 +352,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: COLORS.BROWN_LIGHT,
+    backgroundColor: COLORS.BROWN_DARK,
     alignItems: 'center',
     justifyContent: 'center',
   },

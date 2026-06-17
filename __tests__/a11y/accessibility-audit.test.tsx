@@ -295,6 +295,51 @@ describe('CheckinStep2 accessibility', () => {
     expect(decrementButton).toBeDefined();
     expect(incrementButton).toBeDefined();
   });
+
+  it('should_ExposeIncrementDecrementAccessibilityActions_When_Rendered', () => {
+    // Arrange
+    const CheckinStep2 = require('../../app/checkin/step2').default;
+
+    // Act
+    render(<CheckinStep2 />);
+
+    // Assert — adjustable slider must declare increment/decrement actions so
+    // TalkBack/VoiceOver can drive it (without these it's inert).
+    const slider = screen.getByRole('adjustable', { name: 'Nombre de cuillères' });
+    const actionNames = (slider.props.accessibilityActions ?? []).map(
+      (a: { name: string }) => a.name,
+    );
+    expect(actionNames).toContain('increment');
+    expect(actionNames).toContain('decrement');
+  });
+
+  it('should_UpdateSliderValue_When_AccessibilityActionFired', () => {
+    // Arrange
+    const CheckinStep2 = require('../../app/checkin/step2').default;
+    render(<CheckinStep2 />);
+    const slider = screen.getByRole('adjustable', { name: 'Nombre de cuillères' });
+    // Default starts at 8 (DEFAULT_SPOONS)
+    expect(slider.props.accessibilityValue?.now).toBe(8);
+
+    // Act — fire the increment action as a screen reader would
+    fireEvent(slider, 'accessibilityAction', {
+      nativeEvent: { actionName: 'increment' },
+    });
+
+    // Assert — value reflected in accessibilityValue.now (bounded [0,12])
+    expect(slider.props.accessibilityValue?.now).toBe(9);
+
+    // Act — decrement twice
+    fireEvent(slider, 'accessibilityAction', {
+      nativeEvent: { actionName: 'decrement' },
+    });
+    fireEvent(slider, 'accessibilityAction', {
+      nativeEvent: { actionName: 'decrement' },
+    });
+
+    // Assert
+    expect(slider.props.accessibilityValue?.now).toBe(7);
+  });
 });
 
 // ---------------------------------------------------------------------------
