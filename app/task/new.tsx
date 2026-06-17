@@ -1,17 +1,15 @@
 import { useState } from 'react';
-import { View, Text, TextInput, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { taskRepository } from '@/data/repositories/taskRepository';
 import { taskLogRepository } from '@/data/repositories/taskLogRepository';
-import { Button } from '@/components/ui/button-custom';
 import { BackButton } from '@/components/ui/BackButton';
 import { useToast } from '@/components/ui/Toast';
 import { COLORS } from '@/constants/colors';
 import { Importance } from '@/data/api/types';
-
-const IMPORTANCE_OPTIONS: Importance[] = ['LOW', 'MEDIUM', 'HIGH'];
+import { TaskForm, TaskFormValues } from '@/features/task/components/TaskForm';
 
 /** Reads a single-value search param (expo-router can hand back string[]). */
 function firstParam(value: string | string[] | undefined): string | undefined {
@@ -35,20 +33,6 @@ function isImportance(value: string | undefined): value is Importance {
   return value === 'LOW' || value === 'MEDIUM' || value === 'HIGH';
 }
 
-/**
- * N2: validate the free-text due date client-side so an invalid entry shows a
- * field error instead of a generic 400 "errorSaving". Checks the YYYY-MM-DD
- * shape AND that it is a real calendar date (rejects 2026-02-30, 2026-13-01…).
- */
-function isValidISODate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const [y, m, d] = value.split('-').map(Number);
-  const date = new Date(y, m - 1, d);
-  return (
-    date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d
-  );
-}
-
 export default function TaskNewScreen() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -69,29 +53,26 @@ export default function TaskNewScreen() {
   const templateImportance = firstParam(params.importance);
   const templateSpoonCost = Number(firstParam(params.spoonCost));
 
-  const [name, setName] = useState(templateKey ? t(templateKey) : '');
   // N3: a template hands over the raw category enum (e.g. HYGIENE). Localize it
   // to a free-text label (e.g. "Hygiène") so it persists consistently with
   // manually-typed categories and the Tasks filter chips stop mixing enums and
   // free text. Unknown/free values fall through unchanged via defaultValue.
   const rawCategory = firstParam(params.category) ?? '';
-  const [category, setCategory] = useState(
-    rawCategory ? t(`tasks.categories.${rawCategory}`, { defaultValue: rawCategory }) : '',
-  );
-  const [importance, setImportance] = useState<Importance | undefined>(
-    isImportance(templateImportance) ? templateImportance : undefined,
-  );
-  const [spoonCost, setSpoonCost] = useState(
-    Number.isFinite(templateSpoonCost) && templateSpoonCost > 0 ? templateSpoonCost : 1,
-  );
-  const [dueDate, setDueDate] = useState('');
-  const [notes, setNotes] = useState('');
-  const [showMoreOptions, setShowMoreOptions] = useState(fromTemplate);
-  const [nameError, setNameError] = useState('');
-  const [dueDateError, setDueDateError] = useState('');
-  const [submitError, setSubmitError] = useState('');
+
+  const initialValues: TaskFormValues = {
+    name: templateKey ? t(templateKey) : '',
+    category: rawCategory
+      ? t(`tasks.categories.${rawCategory}`, { defaultValue: rawCategory })
+      : '',
+    importance: isImportance(templateImportance) ? templateImportance : undefined,
+    spoonCost:
+      Number.isFinite(templateSpoonCost) && templateSpoonCost > 0 ? templateSpoonCost : 1,
+    dueDate: '',
+    notes: '',
+  };
 
   const queryClient = useQueryClient();
+  const [submitError, setSubmitError] = useState('');
 
   const { mutateAsync, isPending } = useMutation({
     mutationFn: taskRepository.create,
@@ -100,25 +81,7 @@ export default function TaskNewScreen() {
     },
   });
 
-  const handleSave = async () => {
-    setSubmitError('');
-
-    if (!name.trim()) {
-      setNameError(t('taskForm.nameRequired'));
-      return;
-    }
-
-    setNameError('');
-
-    // N2: reject a malformed date here so the user sees a field error rather
-    // than a generic save failure from the backend's 400.
-    if (dueDate.trim() !== '' && !isValidISODate(dueDate.trim())) {
-      setDueDateError(t('taskForm.dueDateInvalid'));
-      return;
-    }
-
-    setDueDateError('');
-
+  const handleSave = async (values: TaskFormValues) => {
     const payload: {
       name: string;
       category?: string;
@@ -126,13 +89,13 @@ export default function TaskNewScreen() {
       spoonCost?: number;
       dueDate?: string;
       notes?: string;
-    } = { name: name.trim() };
+    } = { name: values.name.trim() };
 
-    if (category.trim()) payload.category = category.trim();
-    if (importance) payload.importance = importance;
-    if (spoonCost > 0) payload.spoonCost = spoonCost;
-    if (dueDate.trim()) payload.dueDate = dueDate.trim();
-    if (notes.trim()) payload.notes = notes.trim();
+    if (values.category.trim()) payload.category = values.category.trim();
+    if (values.importance) payload.importance = values.importance;
+    if (values.spoonCost > 0) payload.spoonCost = values.spoonCost;
+    if (values.dueDate.trim()) payload.dueDate = values.dueDate.trim();
+    if (values.notes.trim()) payload.notes = values.notes.trim();
 
     try {
       const created = await mutateAsync(payload);
@@ -140,8 +103,9 @@ export default function TaskNewScreen() {
       // ADR-007: when the task is due today, also create today's PLANNED log so
       // it appears on Home (which reads ['task-logs']), not just the Tasks tab.
       // A pure string compare avoids parsing the free-text input (no UTC drift).
+      const dueDate = values.dueDate.trim();
       let landedToday = false;
-      if (dueDate.trim() !== '' && dueDate.trim() === localTodayISO() && created?.id) {
+      if (dueDate !== '' && dueDate === localTodayISO() && created?.id) {
         try {
           await taskLogRepository.createManual(created.id);
           queryClient.invalidateQueries({ queryKey: ['task-logs'] });
@@ -171,199 +135,28 @@ export default function TaskNewScreen() {
         {t('taskForm.newTaskTitle')}
       </Text>
 
-      {fromTemplate && (
-        <View testID="from-template-badge" style={styles.templateBadge} accessibilityRole="text">
-          <Text style={styles.templateBadgeText}>{t('taskForm.fromTemplate')}</Text>
-        </View>
-      )}
-
-      <View style={styles.field}>
-        <Text style={styles.label}>
-          {t('taskForm.name')}
-        </Text>
-        <TextInput
-          testID="task-name-input"
-          value={name}
-          onChangeText={(text) => {
-            setName(text);
-            if (nameError) setNameError('');
-          }}
-          accessibilityLabel={t('taskForm.name')}
-          style={styles.input}
-          placeholder={t('taskForm.namePlaceholder')}
-        />
-        {nameError ? (
-          <Text style={styles.errorText} accessibilityRole="alert">
-            {nameError}
-          </Text>
-        ) : null}
-      </View>
-
-      <Pressable
-        testID="more-options-toggle"
-        onPress={() => setShowMoreOptions((prev) => !prev)}
-        accessibilityRole="button"
-        accessibilityLabel={t('taskForm.moreOptions')}
-        accessibilityState={{ expanded: showMoreOptions }}
-        style={styles.toggleButton}
-      >
-        <Text style={styles.toggleText}>
-          {showMoreOptions ? t('taskForm.lessOptions') : t('taskForm.moreOptions')}
-        </Text>
-      </Pressable>
-
-      {showMoreOptions && (
-        <View style={styles.moreOptions}>
-          <View style={styles.field}>
-            <Text style={styles.label}>{t('taskForm.category')}</Text>
-            <TextInput
-              testID="task-category-input"
-              value={category}
-              onChangeText={setCategory}
-              accessibilityLabel={t('taskForm.category')}
-              style={styles.input}
-              placeholder={t('taskForm.categoryPlaceholder')}
-            />
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>{t('taskForm.importance')}</Text>
-            {/* Radio group: mutually exclusive importance levels */}
+      <TaskForm
+        mode="create"
+        collapsible
+        defaultExpanded={fromTemplate}
+        initialValues={initialValues}
+        onSubmit={(values) => {
+          setSubmitError('');
+          handleSave(values);
+        }}
+        isSubmitting={isPending}
+        submitError={submitError}
+        topSlot={
+          fromTemplate ? (
             <View
-              style={styles.importanceRow}
-              accessible
-              accessibilityRole="radiogroup"
-              accessibilityLabel={t('taskForm.importance')}
+              testID="from-template-badge"
+              style={styles.templateBadge}
+              accessibilityRole="text"
             >
-              {IMPORTANCE_OPTIONS.map((level) => (
-                <Pressable
-                  key={level}
-                  testID={`importance-${level}`}
-                  onPress={() => setImportance(level)}
-                  accessibilityRole="radio"
-                  accessibilityLabel={t(`taskForm.importance${level}`)}
-                  accessibilityState={{ checked: importance === level }}
-                  style={[
-                    styles.importanceButton,
-                    importance === level && styles.importanceButtonSelected,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.importanceText,
-                      importance === level && styles.importanceTextSelected,
-                    ]}
-                    importantForAccessibility="no"
-                    accessibilityElementsHidden
-                  >
-                    {t(`taskForm.importance${level}`)}
-                  </Text>
-                </Pressable>
-              ))}
+              <Text style={styles.templateBadgeText}>{t('taskForm.fromTemplate')}</Text>
             </View>
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>
-              {t('taskForm.spoonCost')} : {spoonCost}
-            </Text>
-            <View style={styles.sliderRow}>
-              <Pressable
-                testID="spoon-cost-decrement"
-                onPress={() => setSpoonCost((prev) => Math.max(1, prev - 1))}
-                importantForAccessibility="no-hide-descendants"
-                accessibilityElementsHidden
-                style={styles.sliderButton}
-              >
-                <Text style={styles.sliderButtonText}>-</Text>
-              </Pressable>
-              <View
-                testID="task-spoon-cost-slider"
-                accessible
-                accessibilityRole="adjustable"
-                accessibilityLabel={t('taskForm.spoonCost')}
-                accessibilityValue={{ min: 1, max: 5, now: spoonCost }}
-                accessibilityActions={[
-                  { name: 'increment' },
-                  { name: 'decrement' },
-                ]}
-                onAccessibilityAction={(event) => {
-                  if (event.nativeEvent.actionName === 'increment') {
-                    setSpoonCost((prev) => Math.min(5, prev + 1));
-                  } else if (event.nativeEvent.actionName === 'decrement') {
-                    setSpoonCost((prev) => Math.max(1, prev - 1));
-                  }
-                }}
-                style={styles.sliderTrack}
-              >
-                <View
-                  style={[
-                    styles.sliderFill,
-                    { width: `${((spoonCost - 1) / 4) * 100}%` },
-                  ]}
-                />
-              </View>
-              <Pressable
-                testID="spoon-cost-increment"
-                onPress={() => setSpoonCost((prev) => Math.min(5, prev + 1))}
-                importantForAccessibility="no-hide-descendants"
-                accessibilityElementsHidden
-                style={styles.sliderButton}
-              >
-                <Text style={styles.sliderButtonText}>+</Text>
-              </Pressable>
-            </View>
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>{t('taskForm.dueDateLabel')}</Text>
-            <TextInput
-              testID="task-due-date-input"
-              value={dueDate}
-              onChangeText={(text) => {
-                setDueDate(text);
-                if (dueDateError) setDueDateError('');
-              }}
-              accessibilityLabel={t('taskForm.dueDateLabel')}
-              accessibilityHint={t('taskForm.dueDateHint')}
-              style={styles.input}
-              placeholder={t('taskForm.dueDatePlaceholder')}
-              keyboardType="numbers-and-punctuation"
-            />
-            {dueDateError ? (
-              <Text style={styles.errorText} accessibilityRole="alert">
-                {dueDateError}
-              </Text>
-            ) : null}
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>{t('taskForm.notes')}</Text>
-            <TextInput
-              testID="task-notes-input"
-              value={notes}
-              onChangeText={setNotes}
-              accessibilityLabel={t('taskForm.notes')}
-              style={[styles.input, styles.textArea]}
-              multiline
-              placeholder={t('taskForm.notesPlaceholder')}
-            />
-          </View>
-        </View>
-      )}
-
-      {submitError ? (
-        <Text style={styles.errorText} accessibilityRole="alert">
-          {submitError}
-        </Text>
-      ) : null}
-
-      <Button
-        testID="save-task-button"
-        label={t('taskForm.add')}
-        onPress={handleSave}
-        loading={isPending}
-        disabled={isPending}
+          ) : null
+        }
       />
     </ScrollView>
   );
@@ -394,104 +187,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: COLORS.BROWN_DARK,
-  },
-  field: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.BROWN_DARK,
-    marginBottom: 4,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: COLORS.BROWN_LIGHT,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: COLORS.BROWN_DARK,
-    backgroundColor: COLORS.WHITE,
-    minHeight: 44,
-  },
-  textArea: {
-    minHeight: 88,
-    textAlignVertical: 'top',
-  },
-  errorText: {
-    color: COLORS.ERROR,
-    fontSize: 12,
-    marginTop: 4,
-  },
-  toggleButton: {
-    minHeight: 44,
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  toggleText: {
-    color: COLORS.ORANGE,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  moreOptions: {
-    marginBottom: 16,
-  },
-  importanceRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  importanceButton: {
-    flex: 1,
-    minHeight: 44,
-    borderWidth: 1,
-    borderColor: COLORS.BROWN_LIGHT,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.WHITE,
-  },
-  importanceButtonSelected: {
-    borderColor: COLORS.ORANGE,
-    backgroundColor: COLORS.ORANGE_LIGHT,
-  },
-  importanceText: {
-    fontSize: 13,
-    color: COLORS.BROWN_DARK,
-    fontWeight: '500',
-  },
-  importanceTextSelected: {
-    color: COLORS.BROWN_DARK,
-    fontWeight: '700',
-  },
-  sliderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  sliderButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.BROWN_LIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sliderButtonText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.WHITE,
-    lineHeight: 24,
-  },
-  sliderTrack: {
-    flex: 1,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: COLORS.BROWN_LIGHT,
-    overflow: 'hidden',
-  },
-  sliderFill: {
-    height: '100%',
-    borderRadius: 6,
-    backgroundColor: COLORS.ORANGE,
   },
 });

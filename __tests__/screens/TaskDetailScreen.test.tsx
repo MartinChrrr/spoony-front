@@ -170,6 +170,61 @@ describe('TaskDetailScreen', () => {
   });
 
   // -------------------------------------------------------------------------
+  // 2b. Due-date validation now also guards the EDIT screen (shared TaskForm).
+  //     Previously the edit screen had no client-side date check, so a
+  //     malformed date fell through to a generic 400. After mutualizing the
+  //     form, the same format rule applies here.
+  // -------------------------------------------------------------------------
+
+  it('should_ShowDueDateError_When_DateInvalidOnEdit', async () => {
+    // Arrange
+    renderScreen();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('task-due-date-input')).toBeTruthy();
+    });
+
+    // Act — replace the valid loaded date with a malformed one, then save
+    fireEvent.changeText(screen.getByTestId('task-due-date-input'), '10/04/2026');
+    fireEvent.press(screen.getByTestId('save-task-button'));
+
+    // Assert — field error shown, update mutation blocked
+    await waitFor(() => {
+      expect(screen.getByText('taskForm.dueDateInvalid')).toBeTruthy();
+    });
+    expect(mockUpdateMutateAsync).not.toHaveBeenCalled();
+
+    // A real-looking but impossible calendar date is rejected too
+    fireEvent.changeText(screen.getByTestId('task-due-date-input'), '2026-02-30');
+    fireEvent.press(screen.getByTestId('save-task-button'));
+    await waitFor(() => {
+      expect(screen.getByText('taskForm.dueDateInvalid')).toBeTruthy();
+    });
+    expect(mockUpdateMutateAsync).not.toHaveBeenCalled();
+  });
+
+  // 2c. A valid (even if past) date still saves — editing an overdue task must
+  //     remain possible, so the rule is format-only, not "future only".
+  it('should_StillSave_When_DueDatePastButValidOnEdit', async () => {
+    renderScreen();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('task-due-date-input')).toBeTruthy();
+    });
+
+    // The fixture's date 2026-04-10 is already in the past relative to "today",
+    // yet it is a valid ISO date and must not block saving.
+    fireEvent.changeText(screen.getByTestId('task-due-date-input'), '2020-01-01');
+    fireEvent.press(screen.getByTestId('save-task-button'));
+
+    await waitFor(() => {
+      expect(mockUpdateMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ dueDate: '2020-01-01' }),
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // 3. Confirming delete calls the delete mutation then navigates back
   // -------------------------------------------------------------------------
 

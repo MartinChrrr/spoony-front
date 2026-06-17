@@ -1,33 +1,26 @@
-import { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, ScrollView, Pressable, Modal, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import { View, Text, ScrollView, Pressable, Modal, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { taskRepository } from '@/data/repositories/taskRepository';
-import { Button } from '@/components/ui/button-custom';
 import { BackButton } from '@/components/ui/BackButton';
 import { COLORS } from '@/constants/colors';
 import { Importance } from '@/data/api/types';
-
-const IMPORTANCE_OPTIONS: Importance[] = ['LOW', 'MEDIUM', 'HIGH'];
+import { TaskForm, TaskFormValues } from '@/features/task/components/TaskForm';
 
 export default function TaskDetailScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState('');
-  const [importance, setImportance] = useState<Importance | undefined>(undefined);
-  const [spoonCost, setSpoonCost] = useState(1);
-  const [notes, setNotes] = useState('');
-  const [dueDate, setDueDate] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [nameError, setNameError] = useState('');
   const [saveError, setSaveError] = useState('');
   const [deleteError, setDeleteError] = useState('');
+  // Mirrors the form's name field so the header title updates live as the user
+  // types, matching the pre-refactor behaviour. Seeded from the loaded task.
+  const [displayName, setDisplayName] = useState<string | undefined>(undefined);
 
-  const initialised = useRef(false);
   const queryClient = useQueryClient();
 
   const { data: task, isLoading } = useQuery({
@@ -51,27 +44,8 @@ export default function TaskDetailScreen() {
     },
   });
 
-  useEffect(() => {
-    if (task && !initialised.current) {
-      initialised.current = true;
-      setName(task.name ?? '');
-      setCategory(task.category ?? '');
-      setImportance(task.importance ?? undefined);
-      setSpoonCost(task.spoonCost ?? 1);
-      setNotes(task.notes ?? '');
-      setDueDate(task.dueDate ?? '');
-    }
-  }, [task]);
-
-  const handleSave = async () => {
+  const handleSave = async (values: TaskFormValues) => {
     setSaveError('');
-
-    if (!name.trim()) {
-      setNameError(t('taskForm.nameRequired'));
-      return;
-    }
-
-    setNameError('');
 
     const payload: {
       name?: string;
@@ -82,12 +56,12 @@ export default function TaskDetailScreen() {
       dueDate?: string;
     } = {};
 
-    if (name.trim()) payload.name = name.trim();
-    if (category.trim()) payload.category = category.trim();
-    if (importance) payload.importance = importance;
-    if (spoonCost > 0) payload.spoonCost = spoonCost;
-    if (notes.trim()) payload.notes = notes.trim();
-    if (dueDate.trim()) payload.dueDate = dueDate.trim();
+    if (values.name.trim()) payload.name = values.name.trim();
+    if (values.category.trim()) payload.category = values.category.trim();
+    if (values.importance) payload.importance = values.importance;
+    if (values.spoonCost > 0) payload.spoonCost = values.spoonCost;
+    if (values.notes.trim()) payload.notes = values.notes.trim();
+    if (values.dueDate.trim()) payload.dueDate = values.dueDate.trim();
 
     try {
       await updateMutateAsync(payload);
@@ -95,10 +69,6 @@ export default function TaskDetailScreen() {
     } catch {
       setSaveError(t('taskForm.errorSaving'));
     }
-  };
-
-  const handleDelete = () => {
-    setShowDeleteConfirm(true);
   };
 
   const handleConfirmDelete = async () => {
@@ -110,7 +80,7 @@ export default function TaskDetailScreen() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || !task) {
     return (
       <View style={styles.loadingContainer}>
         <Text accessibilityRole="text">{t('common.loading')}</Text>
@@ -118,229 +88,88 @@ export default function TaskDetailScreen() {
     );
   }
 
+  // The form is mounted only once the task is loaded, so its initial state is
+  // seeded directly from the task (no post-mount useEffect/ref dance).
+  const initialValues: TaskFormValues = {
+    name: task.name ?? '',
+    category: task.category ?? '',
+    importance: task.importance ?? undefined,
+    spoonCost: task.spoonCost ?? 1,
+    dueDate: task.dueDate ?? '',
+    notes: task.notes ?? '',
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <BackButton />
       {/* Screen header landmark — required for VoiceOver/TalkBack navigation */}
       <Text style={styles.screenTitle} accessibilityRole="header">
-        {name || t('taskForm.editTaskTitle')}
+        {(displayName ?? task.name) || t('taskForm.editTaskTitle')}
       </Text>
 
-      <View style={styles.field}>
-        <Text style={styles.label}>{t('taskForm.name')}</Text>
-        <TextInput
-          testID="task-name-input"
-          value={name}
-          onChangeText={(text) => {
-            setName(text);
-            if (nameError) setNameError('');
-          }}
-          accessibilityLabel={t('taskForm.name')}
-          style={styles.input}
-          placeholder={t('taskForm.namePlaceholder')}
-        />
-        {nameError ? (
-          <Text style={styles.errorText} accessibilityRole="alert">
-            {nameError}
-          </Text>
-        ) : null}
-      </View>
-
-      <View style={styles.field}>
-        <Text style={styles.label}>{t('taskForm.category')}</Text>
-        <TextInput
-          testID="task-category-input"
-          value={category}
-          onChangeText={setCategory}
-          accessibilityLabel={t('taskForm.category')}
-          style={styles.input}
-          placeholder={t('taskForm.categoryPlaceholder')}
-        />
-      </View>
-
-      <View style={styles.field}>
-        <Text style={styles.label}>{t('taskForm.importance')}</Text>
-        {/* Radio group: mutually exclusive importance levels */}
-        <View
-          style={styles.importanceRow}
-          accessible
-          accessibilityRole="radiogroup"
-          accessibilityLabel={t('taskForm.importance')}
-        >
-          {IMPORTANCE_OPTIONS.map((level) => (
+      <TaskForm
+        mode="edit"
+        initialValues={initialValues}
+        onSubmit={handleSave}
+        onNameChange={setDisplayName}
+        isSubmitting={isUpdating}
+        submitDisabled={isDeleting}
+        submitError={saveError}
+        bottomSlot={
+          <>
             <Pressable
-              key={level}
-              testID={`importance-${level}`}
-              onPress={() => setImportance(level)}
-              accessibilityRole="radio"
-              accessibilityLabel={t(`taskForm.importance${level}`)}
-              accessibilityState={{ checked: importance === level }}
-              style={[
-                styles.importanceButton,
-                importance === level && styles.importanceButtonSelected,
-              ]}
+              testID="delete-task-button"
+              onPress={() => setShowDeleteConfirm(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t('taskForm.delete')}
+              style={styles.deleteButton}
             >
-              <Text
-                style={[
-                  styles.importanceText,
-                  importance === level && styles.importanceTextSelected,
-                ]}
-                importantForAccessibility="no"
-                accessibilityElementsHidden
-              >
-                {t(`taskForm.importance${level}`)}
-              </Text>
+              <Text style={styles.deleteText}>{t('taskForm.delete')}</Text>
             </Pressable>
-          ))}
-        </View>
-      </View>
 
-      <View style={styles.field}>
-        <Text style={styles.label}>
-          {t('taskForm.spoonCost')} : {spoonCost}
-        </Text>
-        <View style={styles.sliderRow}>
-          <Pressable
-            testID="spoon-cost-decrement"
-            onPress={() => setSpoonCost((prev) => Math.max(1, prev - 1))}
-            importantForAccessibility="no-hide-descendants"
-            accessibilityElementsHidden
-            style={styles.sliderButton}
-          >
-            <Text style={styles.sliderButtonText}>-</Text>
-          </Pressable>
-          <View
-            testID="task-spoon-cost-slider"
-            accessible
-            accessibilityRole="adjustable"
-            accessibilityLabel={t('taskForm.spoonCost')}
-            accessibilityValue={{ min: 1, max: 5, now: spoonCost }}
-            accessibilityActions={[
-              { name: 'increment' },
-              { name: 'decrement' },
-            ]}
-            onAccessibilityAction={(event) => {
-              if (event.nativeEvent.actionName === 'increment') {
-                setSpoonCost((prev) => Math.min(5, prev + 1));
-              } else if (event.nativeEvent.actionName === 'decrement') {
-                setSpoonCost((prev) => Math.max(1, prev - 1));
-              }
-            }}
-            style={styles.sliderTrack}
-          >
-            <View
-              style={[
-                styles.sliderFill,
-                { width: `${((spoonCost - 1) / 4) * 100}%` },
-              ]}
-            />
-          </View>
-          <Pressable
-            testID="spoon-cost-increment"
-            onPress={() => setSpoonCost((prev) => Math.min(5, prev + 1))}
-            importantForAccessibility="no-hide-descendants"
-            accessibilityElementsHidden
-            style={styles.sliderButton}
-          >
-            <Text style={styles.sliderButtonText}>+</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <View style={styles.field}>
-        <Text style={styles.label}>{t('taskForm.dueDateLabel')}</Text>
-        <TextInput
-          testID="task-due-date-input"
-          value={dueDate}
-          onChangeText={setDueDate}
-          accessibilityLabel={t('taskForm.dueDateLabel')}
-          accessibilityHint={t('taskForm.dueDateHint')}
-          style={styles.input}
-          placeholder={t('taskForm.dueDatePlaceholder')}
-          keyboardType="numbers-and-punctuation"
-        />
-      </View>
-
-      <View style={styles.field}>
-        <Text style={styles.label}>{t('taskForm.notes')}</Text>
-        <TextInput
-          testID="task-notes-input"
-          value={notes}
-          onChangeText={setNotes}
-          accessibilityLabel={t('taskForm.notes')}
-          style={[styles.input, styles.textArea]}
-          multiline
-          placeholder={t('taskForm.notesPlaceholder')}
-        />
-      </View>
-
-      {saveError ? (
-        <Text style={styles.errorText} accessibilityRole="alert">
-          {saveError}
-        </Text>
-      ) : null}
-
-      <Button
-        testID="save-task-button"
-        label={t('taskForm.save')}
-        onPress={handleSave}
-        loading={isUpdating}
-        disabled={isUpdating || isDeleting}
-      />
-
-      <Pressable
-        testID="delete-task-button"
-        onPress={handleDelete}
-        accessibilityRole="button"
-        accessibilityLabel={t('taskForm.delete')}
-        style={styles.deleteButton}
-      >
-        <Text style={styles.deleteText}>{t('taskForm.delete')}</Text>
-      </Pressable>
-
-      <Modal
-        visible={showDeleteConfirm}
-        transparent
-        animationType="fade"
-        accessibilityViewIsModal
-        onRequestClose={() => setShowDeleteConfirm(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.confirmContainer}>
-            <Text
-              style={styles.confirmText}
-              accessibilityRole="header"
+            <Modal
+              visible={showDeleteConfirm}
+              transparent
+              animationType="fade"
+              accessibilityViewIsModal
+              onRequestClose={() => setShowDeleteConfirm(false)}
             >
-              {t('taskForm.deleteConfirm')}
-            </Text>
-            {deleteError ? (
-              <Text style={styles.errorText} accessibilityRole="alert">
-                {deleteError}
-              </Text>
-            ) : null}
-            <View style={styles.confirmActions}>
-              <Pressable
-                testID="confirm-delete-button"
-                onPress={handleConfirmDelete}
-                accessibilityRole="button"
-                accessibilityLabel={t('taskForm.confirmDelete')}
-                style={[styles.confirmButton, styles.confirmButtonDanger]}
-              >
-                <Text style={styles.confirmButtonText}>{t('taskForm.confirmDelete')}</Text>
-              </Pressable>
-              <Pressable
-                testID="cancel-delete-button"
-                onPress={() => setShowDeleteConfirm(false)}
-                accessibilityRole="button"
-                accessibilityLabel={t('common.cancel')}
-                style={[styles.confirmButton, styles.confirmButtonCancel]}
-              >
-                <Text style={styles.confirmButtonCancelText}>{t('common.cancel')}</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+              <View style={styles.modalOverlay}>
+                <View style={styles.confirmContainer}>
+                  <Text style={styles.confirmText} accessibilityRole="header">
+                    {t('taskForm.deleteConfirm')}
+                  </Text>
+                  {deleteError ? (
+                    <Text style={styles.errorText} accessibilityRole="alert">
+                      {deleteError}
+                    </Text>
+                  ) : null}
+                  <View style={styles.confirmActions}>
+                    <Pressable
+                      testID="confirm-delete-button"
+                      onPress={handleConfirmDelete}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('taskForm.confirmDelete')}
+                      style={[styles.confirmButton, styles.confirmButtonDanger]}
+                    >
+                      <Text style={styles.confirmButtonText}>{t('taskForm.confirmDelete')}</Text>
+                    </Pressable>
+                    <Pressable
+                      testID="cancel-delete-button"
+                      onPress={() => setShowDeleteConfirm(false)}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('common.cancel')}
+                      style={[styles.confirmButton, styles.confirmButtonCancel]}
+                    >
+                      <Text style={styles.confirmButtonCancelText}>{t('common.cancel')}</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
+            </Modal>
+          </>
+        }
+      />
     </ScrollView>
   );
 }
@@ -363,91 +192,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: COLORS.CREAM,
   },
-  field: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.BROWN_DARK,
-    marginBottom: 4,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: COLORS.BROWN_LIGHT,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: COLORS.BROWN_DARK,
-    backgroundColor: COLORS.WHITE,
-    minHeight: 44,
-  },
-  textArea: {
-    minHeight: 88,
-    textAlignVertical: 'top',
-  },
   errorText: {
     color: COLORS.ERROR,
     fontSize: 12,
     marginTop: 4,
-  },
-  importanceRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  importanceButton: {
-    flex: 1,
-    minHeight: 44,
-    borderWidth: 1,
-    borderColor: COLORS.BROWN_LIGHT,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.WHITE,
-  },
-  importanceButtonSelected: {
-    borderColor: COLORS.ORANGE,
-    backgroundColor: COLORS.ORANGE_LIGHT,
-  },
-  importanceText: {
-    fontSize: 13,
-    color: COLORS.BROWN_DARK,
-    fontWeight: '500',
-  },
-  importanceTextSelected: {
-    color: COLORS.BROWN_DARK,
-    fontWeight: '700',
-  },
-  sliderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  sliderButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.BROWN_LIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sliderButtonText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.WHITE,
-    lineHeight: 24,
-  },
-  sliderTrack: {
-    flex: 1,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: COLORS.BROWN_LIGHT,
-    overflow: 'hidden',
-  },
-  sliderFill: {
-    height: '100%',
-    borderRadius: 6,
-    backgroundColor: COLORS.ORANGE,
   },
   deleteButton: {
     minHeight: 44,
