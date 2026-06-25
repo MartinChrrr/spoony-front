@@ -1,16 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 
 import { isValidEmail } from '@/utils/validation';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { BackButton } from '@/components/ui/BackButton';
 import { COLORS } from '@/constants/colors';
 
 export default function RegisterScreen(): React.ReactElement {
   const { register } = useAuth();
   const { t } = useTranslation();
+  const router = useRouter();
 
   const [firstName, setFirstName] = useState('');
   const [email, setEmail] = useState('');
@@ -64,6 +66,15 @@ export default function RegisterScreen(): React.ReactElement {
       className="flex-1 bg-cream"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* Explicit exit back to login — register is reachable from login, so this
+          is never a dead-end. Falls back to login if there is no history. */}
+      <View className="px-2 pt-2">
+        <BackButton
+          onPress={() =>
+            router.canGoBack() ? router.back() : router.replace('/(auth)/login')
+          }
+        />
+      </View>
       <ScrollView
         contentContainerClassName="flex-1 justify-center px-6"
         keyboardShouldPersistTaps="handled"
