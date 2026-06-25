@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_call: {} # reused as a gate by cd-eas.yml before any build
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref to save minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Typecheck, i18n parity, tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck (source only — tsconfig.ci.json)
+        run: npm run typecheck
+
+      - name: i18n parity (en/fr)
+        run: npm run i18n:check
+
+      - name: Unit tests
+        run: npm run test:ci
+
+      # Non-blocking: surfaces Expo/dependency health, reusing node_modules above.
+      - name: Expo doctor (informational)
+        run: npx --yes expo-doctor
+        continue-on-error: true

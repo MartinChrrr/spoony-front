@@ -1,0 +1,14 @@
+{
+  "//": "Typecheck gate for CI: source only. Tests are validated by jest (babel),",
+  "//2": "not tsc — they lack @types/jest so including them here would be noise.",
+  "extends": "./tsconfig.json",
+  "include": ["**/*.ts", "**/*.tsx", "nativewind-env.d.ts"],
+  "exclude": [
+    "node_modules",
+    "__tests__",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx"
+  ]
+}

@@ -1,0 +1,85 @@
+name: CD — EAS Build
+
+# Builds the app binaries on Expo Application Services (EAS).
+#
+# Triggers:
+#   - manual (workflow_dispatch): choose profile + platform
+#   - semver tag push v1.2.3 : a production build for a release
+#
+# Every build is gated by the CI quality job first (job `ci` below).
+#
+# Requirements (see .github/CICD.md):
+#   - repository secret EXPO_TOKEN (Expo access token)
+#   - the project linked to EAS: `eas init` must have set extra.eas.projectId
+#     in app.config.ts, and store credentials must exist in EAS for production.
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: EAS build profile (eas.json)
+        type: choice
+        options: [preview, production]
+        default: preview
+      platform:
+        description: Target platform(s)
+        type: choice
+        options: [all, android, ios]
+        default: all
+  push:
+    # Semver release tags only (excludes RC / test tags from triggering a build).
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+
+# Never cancel an in-flight build trigger.
+concurrency:
+  group: eas-build-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # Gate: a build (especially a release tag) must pass the same checks as CI.
+  ci:
+    name: Quality gate
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    name: EAS build
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Require EXPO_TOKEN
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::EXPO_TOKEN secret manquant — voir .github/CICD.md"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set up EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build on EAS
+        env:
+          # Tag pushes have no inputs -> default to a production build.
+          PROFILE: ${{ github.event.inputs.profile || 'production' }}
+          PLATFORM: ${{ github.event.inputs.platform || 'all' }}
+        run: |
+          echo "Building profile=$PROFILE platform=$PLATFORM"
+          echo "::notice::Build queued on EAS (--no-wait). Job success != build success — check https://expo.dev"
+          eas build --non-interactive --no-wait --platform "$PLATFORM" --profile "$PROFILE"
