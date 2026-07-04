@@ -39,6 +39,16 @@ export default function CheckinStep3() {
     }
   }, [suggestions]);
 
+  // Brand-new user (empty global task list) or everything already logged today
+  // → no suggestions to select. Don't strand the user on an empty checklist with
+  // a "0 / X spoons" bar and a "Let's go" button; go straight home, where the
+  // first-run empty state guides them to create a first task (ADR-021).
+  useEffect(() => {
+    if (!isLoading && !isError && suggestions.length === 0) {
+      router.replace('/(tabs)');
+    }
+  }, [isLoading, isError, suggestions.length, router]);
+
   const toggleTask = (userTaskId: string) => {
     setCheckedIds((prev) => {
       const next = new Set(prev);

@@ -169,6 +169,17 @@ export default function HomeScreen(): React.ReactElement {
     month: 'long',
   });
 
+  // First-day empty state (comité 2026-07-04, ADR-021). The check-in only PLANS
+  // existing tasks — it never creates any — so a brand-new user with an empty
+  // global task list lands here with nothing to show and no next step. We split:
+  //  (A) isFirstRun: no global tasks at all → warm invite to create a first task;
+  //  (B) isRestDay: has tasks but none planned today → neutral, no pushy CTA.
+  // Gate on loaded data (query data !== undefined) to avoid flashing empty state.
+  const isDayDataReady = tasks !== undefined && taskLogs !== undefined;
+  const globalTaskCount = (tasks ?? []).length;
+  const isFirstRun = isDayDataReady && globalTaskCount === 0;
+  const isRestDay = isDayDataReady && globalTaskCount > 0 && todayItems.length === 0;
+
   return (
     <ScrollView
       style={styles.container}
@@ -231,16 +242,21 @@ export default function HomeScreen(): React.ReactElement {
         </View>
       )}
 
-      <Pressable
-        testID="reevaluate-button"
-        onPress={() => router.push('/checkin/step2')}
-        accessibilityRole="button"
-        accessibilityLabel={t('home.reevaluate')}
-        accessibilityHint={t('home.reevaluateHint')}
-        style={styles.reevaluateButton}
-      >
-        <Text style={styles.reevaluateText}>{t('home.reevaluate')}</Text>
-      </Pressable>
+      {/* Reevaluate re-runs the check-in over EXISTING tasks; it is a dead loop
+          for a first-run user who has none, so hide it on the first-run empty
+          state (ADR-021). It stays on a rest day (case B) where re-planning helps. */}
+      {!isFirstRun && (
+        <Pressable
+          testID="reevaluate-button"
+          onPress={() => router.push('/checkin/step2')}
+          accessibilityRole="button"
+          accessibilityLabel={t('home.reevaluate')}
+          accessibilityHint={t('home.reevaluateHint')}
+          style={styles.reevaluateButton}
+        >
+          <Text style={styles.reevaluateText}>{t('home.reevaluate')}</Text>
+        </Pressable>
+      )}
 
       <View style={styles.taskSection}>
         <Text style={styles.sectionTitle} accessibilityRole="header">
@@ -297,6 +313,56 @@ export default function HomeScreen(): React.ReactElement {
             </Text>
           </Pressable>
         ))}
+
+        {/* (A) First run: empty global list → warm invite to create a first task.
+            The invite is a SIBLING of the accessible text card (not a child) so the
+            button keeps its own screen-reader focus stop. */}
+        {todayItems.length === 0 && isFirstRun && (
+          <>
+            <View
+              testID="home-empty-firstrun"
+              style={styles.emptyCard}
+              accessible
+              accessibilityRole="text"
+            >
+              <Text style={styles.emptyTitle}>{t('home.emptyFirstRunTitle')}</Text>
+              <Text style={styles.emptyBody}>{t('home.emptyFirstRunBody')}</Text>
+            </View>
+            <Pressable
+              testID="create-first-task-button"
+              onPress={() => router.push('/task/choose')}
+              accessibilityRole="button"
+              accessibilityLabel={t('home.emptyFirstRunCta')}
+              style={styles.composeButton}
+            >
+              <Text style={styles.composeButtonText}>{t('home.emptyFirstRunCta')}</Text>
+            </Pressable>
+          </>
+        )}
+
+        {/* (B) Rest day: has tasks but none planned today → neutral rest message,
+            with a discreet (non-orange) link to add a task. No pressure. */}
+        {todayItems.length === 0 && isRestDay && (
+          <>
+            <View
+              testID="home-empty-restday"
+              style={styles.emptyCard}
+              accessible
+              accessibilityRole="text"
+            >
+              <Text style={styles.emptyBody}>{t('home.noTasks')}</Text>
+            </View>
+            <Pressable
+              testID="add-task-link"
+              onPress={() => router.push('/task/choose')}
+              accessibilityRole="button"
+              accessibilityLabel={t('home.addTask')}
+              style={styles.addTaskLink}
+            >
+              <Text style={styles.addTaskLinkText}>{t('home.addTask')}</Text>
+            </Pressable>
+          </>
+        )}
       </View>
     </ScrollView>
   );
@@ -450,5 +516,52 @@ const styles = StyleSheet.create({
   taskNameCompleted: {
     color: COLORS.BROWN_LIGHT,
     textDecorationLine: 'line-through',
+  },
+
+  // Empty states (first run / rest day)
+  emptyCard: {
+    backgroundColor: COLORS.WHITE,
+    borderRadius: 12,
+    padding: 16,
+    gap: 6,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.BROWN_DARK,
+  },
+  emptyBody: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: COLORS.BROWN_DARK,
+  },
+  // First-run primary CTA. White on ORANGE #A85000 = 5.49:1 → passes WCAG AA.
+  composeButton: {
+    minHeight: 48,
+    backgroundColor: COLORS.ORANGE,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  composeButtonText: {
+    color: COLORS.WHITE,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  // Rest-day discreet link (never an orange button — no pressure on a rest day).
+  // ORANGE #A85000 on CREAM #F7F0E8 = 4.87:1 → passes AA; underline = non-colour cue.
+  addTaskLink: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+  },
+  addTaskLinkText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.ORANGE,
+    textDecorationLine: 'underline',
   },
 });

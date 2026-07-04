@@ -124,6 +124,26 @@ describe('CheckinStep3', () => {
   });
 
   // -------------------------------------------------------------------------
+  // 0. Empty suggestions → skip the empty checklist, go home (ADR-021)
+  // -------------------------------------------------------------------------
+
+  it('should_RedirectHome_When_NoSuggestions', async () => {
+    // Arrange — brand-new user (empty global list) or all tasks already logged:
+    // the suggestions query resolves to an empty array.
+    mockedUseQuery.mockImplementation(
+      () => ({ data: [], isLoading: false, isError: false }) as ReturnType<typeof useQuery>,
+    );
+
+    // Act
+    renderScreen();
+
+    // Assert — no dead-end empty checklist; straight to the home empty state
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith('/(tabs)');
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // 1. Suggestions are fetched and displayed
   // -------------------------------------------------------------------------
 

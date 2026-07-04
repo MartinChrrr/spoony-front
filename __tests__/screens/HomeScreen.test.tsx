@@ -359,6 +359,65 @@ describe('HomeScreen', () => {
   });
 
   // -------------------------------------------------------------------------
+  // 6bis. First-day & empty states (ADR-021)
+  // -------------------------------------------------------------------------
+
+  it('should_ShowFirstRunInvite_When_GlobalTaskListEmpty', () => {
+    // Arrange — energy declared, but zero global tasks and zero logs (brand-new user)
+    mockedUseQuery
+      .mockReturnValueOnce({ data: MOCK_ENERGY, isLoading: false, isError: false } as ReturnType<typeof useQuery>)
+      .mockReturnValueOnce({ data: [], isLoading: false, isError: false } as ReturnType<typeof useQuery>)
+      .mockReturnValueOnce({ data: [], isLoading: false, isError: false } as ReturnType<typeof useQuery>)
+      .mockReturnValue({ data: null, isLoading: false, isError: false } as ReturnType<typeof useQuery>);
+    mockedUseMutation.mockReturnValue({ mutateAsync: jest.fn(), isPending: false } as ReturnType<typeof useMutation>);
+
+    // Act
+    renderScreen();
+
+    // Assert — warm invite + compose CTA, and no dead-loop "reevaluate" button
+    expect(screen.getByTestId('home-empty-firstrun')).toBeTruthy();
+    expect(screen.getByTestId('create-first-task-button')).toBeTruthy();
+    expect(screen.queryByTestId('reevaluate-button')).toBeNull();
+    expect(screen.queryByTestId('home-empty-restday')).toBeNull();
+  });
+
+  it('should_NavigateToChoose_When_CreateFirstTaskPressed', () => {
+    // Arrange — first-run empty state
+    mockedUseQuery
+      .mockReturnValueOnce({ data: MOCK_ENERGY, isLoading: false, isError: false } as ReturnType<typeof useQuery>)
+      .mockReturnValueOnce({ data: [], isLoading: false, isError: false } as ReturnType<typeof useQuery>)
+      .mockReturnValueOnce({ data: [], isLoading: false, isError: false } as ReturnType<typeof useQuery>)
+      .mockReturnValue({ data: null, isLoading: false, isError: false } as ReturnType<typeof useQuery>);
+    mockedUseMutation.mockReturnValue({ mutateAsync: jest.fn(), isPending: false } as ReturnType<typeof useMutation>);
+    renderScreen();
+
+    // Act
+    fireEvent.press(screen.getByTestId('create-first-task-button'));
+
+    // Assert
+    expect(mockPush).toHaveBeenCalledWith('/task/choose');
+  });
+
+  it('should_ShowRestDayMessage_When_HasTasksButNonePlannedToday', () => {
+    // Arrange — energy declared, global tasks exist, but no logs today (rest day)
+    mockedUseQuery
+      .mockReturnValueOnce({ data: MOCK_ENERGY, isLoading: false, isError: false } as ReturnType<typeof useQuery>)
+      .mockReturnValueOnce({ data: [], isLoading: false, isError: false } as ReturnType<typeof useQuery>)
+      .mockReturnValueOnce({ data: MOCK_TASKS, isLoading: false, isError: false } as ReturnType<typeof useQuery>)
+      .mockReturnValue({ data: null, isLoading: false, isError: false } as ReturnType<typeof useQuery>);
+    mockedUseMutation.mockReturnValue({ mutateAsync: jest.fn(), isPending: false } as ReturnType<typeof useMutation>);
+
+    // Act
+    renderScreen();
+
+    // Assert — neutral rest message + discreet add link; reevaluate stays available
+    expect(screen.getByTestId('home-empty-restday')).toBeTruthy();
+    expect(screen.getByTestId('add-task-link')).toBeTruthy();
+    expect(screen.getByTestId('reevaluate-button')).toBeTruthy();
+    expect(screen.queryByTestId('home-empty-firstrun')).toBeNull();
+  });
+
+  // -------------------------------------------------------------------------
   // 7. Rest system — Bravo card when every task is completed
   // -------------------------------------------------------------------------
 

@@ -110,6 +110,8 @@ jest.mock('react-i18next', () => ({
         'home.reevaluate': 'Réévaluer ma journée',
         'home.reevaluateHint': 'Ouvre le formulaire pour réévaluer votre énergie du jour',
         'home.todayTasks': 'Tâches du jour',
+        'home.noTasks': "Rien de prévu aujourd'hui, et c'est très bien.",
+        'home.addTask': 'Ajouter une tâche',
         'taskForm.name': 'Nom de la tâche',
         'taskForm.moreOptions': "Plus d'options",
         'taskForm.lessOptions': "Moins d'options",
@@ -355,7 +357,12 @@ describe('HomeScreen accessibility', () => {
       if (queryKey[0] === 'energy') {
         return { data: { spoons: 8, spoonsUsed: 3 }, isLoading: false, isError: false };
       }
-      // task-logs and tasks return empty arrays
+      if (queryKey[0] === 'tasks') {
+        // Non-empty global task list so the reevaluate button renders. It is hidden
+        // only on the first-run empty state (zero global tasks) — see ADR-021.
+        return { data: [{ id: 't1' }], isLoading: false, isError: false };
+      }
+      // task-logs (current + month range) return empty → no tasks planned today
       return { data: [], isLoading: false, isError: false };
     });
     const HomeScreen = require('../../app/(tabs)/index').default;
