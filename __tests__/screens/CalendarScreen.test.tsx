@@ -19,6 +19,10 @@ jest.mock('@tanstack/react-query', () => ({
   useQuery: jest.fn(),
 }));
 
+jest.mock('@/features/auth/hooks/useAuth', () => ({
+  useAuth: () => ({ user: { id: 'user-1' } }),
+}));
+
 jest.mock('@/data/repositories/taskLogRepository', () => ({
   taskLogRepository: { getAll: jest.fn(), getRange: jest.fn() },
 }));

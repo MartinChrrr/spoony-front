@@ -17,34 +17,34 @@ const CACHE_KEYS = {
 } as const;
 
 export const taskLogRepository = {
-  getAll: async (includeArchived?: boolean): Promise<TaskLogResponse[]> => {
+  getAll: async (userId: string, includeArchived?: boolean): Promise<TaskLogResponse[]> => {
     const cacheKey = includeArchived ? CACHE_KEYS.ALL_ARCHIVED : CACHE_KEYS.ALL;
     try {
       const response = await taskLogEndpoints.getAll(includeArchived);
       const logs = response.data.data ?? [];
-      await cacheManager.set(cacheKey, logs);
+      await cacheManager.setForUser(userId, cacheKey, logs);
       return logs;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response !== undefined) {
         throw error;
       }
-      const cached = await cacheManager.get<TaskLogResponse[]>(cacheKey);
+      const cached = await cacheManager.getForUser<TaskLogResponse[]>(userId, cacheKey);
       return cached ?? [];
     }
   },
 
-  getRange: async (from: string, to: string): Promise<TaskLogResponse[]> => {
+  getRange: async (userId: string, from: string, to: string): Promise<TaskLogResponse[]> => {
     const cacheKey = `task-logs:range:${from}:${to}`;
     try {
       const response = await taskLogEndpoints.getRange(from, to);
       const logs = response.data.data ?? [];
-      await cacheManager.set(cacheKey, logs);
+      await cacheManager.setForUser(userId, cacheKey, logs);
       return logs;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response !== undefined) {
         throw error;
       }
-      const cached = await cacheManager.get<TaskLogResponse[]>(cacheKey);
+      const cached = await cacheManager.getForUser<TaskLogResponse[]>(userId, cacheKey);
       return cached ?? [];
     }
   },

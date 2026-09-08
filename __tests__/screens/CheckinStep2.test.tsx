@@ -16,6 +16,10 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
+jest.mock('@/features/auth/hooks/useAuth', () => ({
+  useAuth: () => ({ user: { id: 'user-1' } }),
+}));
+
 const mockCreateEnergyMutateAsync = jest.fn().mockResolvedValue({});
 let mockCreateEnergyIsPending = false;
 

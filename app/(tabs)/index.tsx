@@ -7,6 +7,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import { energyRepository } from '@/data/repositories/energyRepository';
 import { taskLogRepository } from '@/data/repositories/taskLogRepository';
 import { taskRepository } from '@/data/repositories/taskRepository';
+import { queryKeys } from '@/data/query/queryKeys';
 import { taskLogEndpoints } from '@/data/api/endpoints/taskLogs';
 import { messageEndpoints } from '@/data/api/endpoints/messages';
 import SpoonGauge from '@/components/shared/SpoonGauge';
@@ -47,6 +48,7 @@ export default function HomeScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const { user } = useAuth();
+  const userId = user?.id ?? '';
   const queryClient = useQueryClient();
   const { show: showToast } = useToast();
 
@@ -56,8 +58,9 @@ export default function HomeScreen(): React.ReactElement {
   const inFlightLogIds = useRef<Set<string>>(new Set());
 
   const { data: energy, isLoading: isEnergyLoading } = useQuery<EnergyResponse | null>({
-    queryKey: ['energy', 'today'],
-    queryFn: () => energyRepository.getToday(),
+    queryKey: queryKeys.energyToday(userId),
+    queryFn: () => energyRepository.getToday(userId),
+    enabled: userId !== '',
   });
 
   // C2: Gate — redirect to check-in if no energy has been declared yet today.
@@ -72,13 +75,15 @@ export default function HomeScreen(): React.ReactElement {
   }, [isEnergyLoading, energy, router]);
 
   const { data: taskLogs } = useQuery<TaskLogResponse[]>({
-    queryKey: ['task-logs'],
-    queryFn: () => taskLogRepository.getAll(),
+    queryKey: queryKeys.taskLogs(userId),
+    queryFn: () => taskLogRepository.getAll(userId),
+    enabled: userId !== '',
   });
 
   const { data: tasks } = useQuery<TaskResponse[]>({
-    queryKey: ['tasks'],
-    queryFn: () => taskRepository.getAll(),
+    queryKey: queryKeys.tasks(userId),
+    queryFn: () => taskRepository.getAll(userId),
+    enabled: userId !== '',
   });
 
   const { mutateAsync: updateStatus } = useMutation<
@@ -90,8 +95,8 @@ export default function HomeScreen(): React.ReactElement {
       taskLogRepository.updateStatus(id, { status }),
     onSuccess: () => {
       // Refresh the day's logs + energy so the list and rest system update.
-      queryClient.invalidateQueries({ queryKey: ['task-logs'] });
-      queryClient.invalidateQueries({ queryKey: ['energy', 'today'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.taskLogs(userId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.energyToday(userId) });
     },
   });
 
@@ -132,8 +137,9 @@ export default function HomeScreen(): React.ReactElement {
   // window and structurally capped the cumulative count. getRange is built for
   // exactly this (inclusive YYYY-MM-DD bounds).
   const { data: monthLogs } = useQuery<TaskLogResponse[]>({
-    queryKey: ['task-logs', 'range', monthFrom, monthTo],
-    queryFn: () => taskLogRepository.getRange(monthFrom, monthTo),
+    queryKey: queryKeys.taskLogsRange(userId, monthFrom, monthTo),
+    queryFn: () => taskLogRepository.getRange(userId, monthFrom, monthTo),
+    enabled: userId !== '',
   });
 
   // Monthly cumulative: distinct days this month with at least one completed task.
@@ -158,8 +164,8 @@ export default function HomeScreen(): React.ReactElement {
   const { mutateAsync: postponeAll, isPending: isPostponing } = useMutation({
     mutationFn: () => taskLogEndpoints.bulkPostpone(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['task-logs'] });
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.taskLogs(userId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks(userId) });
     },
   });
 

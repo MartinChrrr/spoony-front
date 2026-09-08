@@ -3,11 +3,15 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { messageEndpoints, MessageResponse } from '@/data/api/endpoints/messages';
+import { queryKeys } from '@/data/query/queryKeys';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { COLORS } from '@/constants/colors';
 
 export default function ZeroEnergyScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
   const queryClient = useQueryClient();
 
   const { data: message, isLoading } = useQuery<MessageResponse | null>({
@@ -59,8 +63,8 @@ export default function ZeroEnergyScreen() {
           onPress={() => {
             // Invalidate so the home screen gate sees the freshly declared energy
             // and does not immediately redirect back to check-in.
-            queryClient.invalidateQueries({ queryKey: ['energy', 'today'] });
-            queryClient.invalidateQueries({ queryKey: ['task-logs'] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.energyToday(userId) });
+            queryClient.invalidateQueries({ queryKey: queryKeys.taskLogs(userId) });
             router.replace('/(tabs)');
           }}
           accessibilityRole="button"

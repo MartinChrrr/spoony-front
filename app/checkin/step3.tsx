@@ -6,6 +6,8 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 
 import { suggestionEndpoints, SuggestionResponse } from '@/data/api/endpoints/suggestions';
 import { taskLogEndpoints, TaskLogResponse } from '@/data/api/endpoints/taskLogs';
+import { queryKeys } from '@/data/query/queryKeys';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { Button } from '@/components/ui/button-custom';
 import { BackButton } from '@/components/ui/BackButton';
 import { COLORS } from '@/constants/colors';
@@ -13,16 +15,19 @@ import { COLORS } from '@/constants/colors';
 export default function CheckinStep3() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
   const { spoons } = useLocalSearchParams<{ spoons: string }>();
 
   const totalSpoons = parseInt(spoons ?? '0', 10);
 
   const { data: suggestions = [], isLoading, isError } = useQuery({
-    queryKey: ['suggestions'],
+    queryKey: queryKeys.suggestions(userId),
     queryFn: async () => {
       const response = await suggestionEndpoints.getAll();
       return response.data.data ?? [];
     },
+    enabled: userId !== '',
   });
 
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
@@ -71,11 +76,12 @@ export default function CheckinStep3() {
 
   // Tasks already logged today must not be re-created (UNIQUE user_task_id+date).
   const { data: todayLogs = [] } = useQuery<TaskLogResponse[]>({
-    queryKey: ['task-logs'],
+    queryKey: queryKeys.taskLogs(userId),
     queryFn: async () => {
       const res = await taskLogEndpoints.getAll();
       return res.data.data ?? [];
     },
+    enabled: userId !== '',
   });
   const alreadyLoggedIds = useMemo(
     () => new Set(todayLogs.map((l) => l.userTaskId)),

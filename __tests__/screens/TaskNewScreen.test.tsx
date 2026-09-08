@@ -30,6 +30,10 @@ jest.mock('@tanstack/react-query', () => ({
   })),
 }));
 
+jest.mock('@/features/auth/hooks/useAuth', () => ({
+  useAuth: () => ({ user: { id: 'user-1' } }),
+}));
+
 jest.mock('@/data/repositories/taskRepository', () => ({
   taskRepository: { create: jest.fn() },
 }));

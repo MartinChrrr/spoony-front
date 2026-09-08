@@ -20,12 +20,12 @@ interface CachedEnergy {
 }
 
 export const energyRepository = {
-  getToday: async (): Promise<EnergyResponse | null> => {
+  getToday: async (userId: string): Promise<EnergyResponse | null> => {
     try {
       const response = await energyEndpoints.getToday();
       const energy = response.data.data;
       if (energy !== null) {
-        await cacheManager.set<CachedEnergy>(CACHE_KEYS.TODAY, {
+        await cacheManager.setForUser<CachedEnergy>(userId, CACHE_KEYS.TODAY, {
           data: energy,
           date: new Date().toISOString().split('T')[0],
         });
@@ -35,7 +35,7 @@ export const energyRepository = {
       if (axios.isAxiosError(error) && error.response !== undefined) {
         throw error;
       }
-      const cached = await cacheManager.get<CachedEnergy>(CACHE_KEYS.TODAY);
+      const cached = await cacheManager.getForUser<CachedEnergy>(userId, CACHE_KEYS.TODAY);
       const today = new Date().toISOString().split('T')[0];
       if (cached && cached.date === today) {
         return cached.data;

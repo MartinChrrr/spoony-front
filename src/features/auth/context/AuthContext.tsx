@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, ReactNode,
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { jwtDecode } from 'jwt-decode';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { authEndpoints } from '@/data/api/endpoints/auth';
 import { registerSessionExpiredHandler } from '@/data/api/client';
@@ -55,10 +56,20 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps): ReactElement {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(true);
+
+  const clearAccountCaches = useCallback(async (): Promise<void> => {
+    // Stop requests started by the previous identity before dropping their
+    // in-memory results. Persistent values are also removed as defence in depth;
+    // repositories still namespace every value by user id.
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await cacheManager.clearAll();
+  }, [queryClient]);
 
   const logout = useCallback(async (): Promise<void> => {
     // Revoke the refresh token server-side first. On a shared aidant/aidé device
@@ -75,17 +86,24 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
     // so a returning user is not asked to redo onboarding.
     await AsyncStorage.removeItem('spoonrest.userEmail');
     await AsyncStorage.removeItem('spoonrest.userFirstName');
-    await cacheManager.clear();
+    await clearAccountCaches();
     setUser(null);
     setSessionExpired(false);
     setHasCompletedOnboarding(true);
-  }, []);
+  }, [clearAccountCaches]);
 
   useEffect(() => {
     const restoreSession = async (): Promise<void> => {
       try {
+        // One-time migration: old app versions stored account data under global
+        // cache keys. Those values must never be read after this version starts.
+        await cacheManager.clearLegacy();
+
         const storedToken = await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-        if (storedToken === null) return;
+        if (storedToken === null) {
+          await clearAccountCaches();
+          return;
+        }
 
         const payload = jwtDecode<JwtPayload>(storedToken);
         const isExpired = payload.exp !== undefined && payload.exp * 1000 < Date.now();
@@ -94,17 +112,24 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
 
         if (isExpired) {
           const refreshToken = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
-          if (refreshToken === null) return;
+          if (refreshToken === null) {
+            await clearAccountCaches();
+            return;
+          }
 
           try {
             const response = await authEndpoints.refresh({ refreshToken });
             const tokens = response.data.data;
-            if (tokens === null) return;
+            if (tokens === null) {
+              await clearAccountCaches();
+              return;
+            }
 
             await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, tokens.accessToken);
             await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, tokens.refreshToken);
             activeToken = tokens.accessToken;
           } catch {
+            await clearAccountCaches();
             return;
           }
         }
@@ -122,9 +147,12 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
           });
           const onboardingValue = await AsyncStorage.getItem(onboardingKey(userId));
           setHasCompletedOnboarding(onboardingValue !== null);
+        } else {
+          await clearAccountCaches();
         }
       } catch (error) {
         console.error('[AuthContext] Failed to restore session:', error);
+        await clearAccountCaches();
       } finally {
         setIsLoading(false);
       }
@@ -136,7 +164,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
     });
 
     void restoreSession();
-  }, [logout]);
+  }, [clearAccountCaches, logout]);
 
   const login = async (email: string, password: string): Promise<void> => {
     const response = await authEndpoints.login({ email, password });
@@ -145,6 +173,10 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
       throw new Error('AUTH_RESPONSE_EMPTY');
     }
     const { accessToken: newAccessToken, refreshToken, userId, firstName } = tokens;
+
+    // A successful login can follow an interrupted/expired session without an
+    // explicit logout. Purge the previous identity before adopting the new one.
+    await clearAccountCaches();
 
     await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
     await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
@@ -169,6 +201,8 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
       throw new Error('AUTH_RESPONSE_EMPTY');
     }
     const { accessToken: newAccessToken, refreshToken, userId } = tokens;
+
+    await clearAccountCaches();
 
     await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
     await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);

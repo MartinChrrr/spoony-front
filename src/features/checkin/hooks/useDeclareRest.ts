@@ -7,6 +7,8 @@ import {
   EnergyResponse,
 } from '@/data/api/endpoints/energy';
 import { energyRepository } from '@/data/repositories/energyRepository';
+import { queryKeys } from '@/data/query/queryKeys';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 /**
  * Hook partagé entre step1 et step2 pour déclarer/réviser l'énergie.
@@ -27,17 +29,20 @@ export function useDeclareRest(): {
   hasEnergyToday: boolean;
 } {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
 
   const { data: todayEnergy } = useQuery<EnergyResponse | null>({
-    queryKey: ['energy', 'today'],
-    queryFn: () => energyRepository.getToday(),
+    queryKey: queryKeys.energyToday(userId),
+    queryFn: () => energyRepository.getToday(userId),
+    enabled: userId !== '',
   });
 
   const hasEnergyToday = todayEnergy != null;
 
   function invalidateQueries() {
-    queryClient.invalidateQueries({ queryKey: ['energy', 'today'] });
-    queryClient.invalidateQueries({ queryKey: ['task-logs'] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.energyToday(userId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.taskLogs(userId) });
   }
 
   const { mutateAsync: createEnergy, isPending: isDeclaring } = useMutation<

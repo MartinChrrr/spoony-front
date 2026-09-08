@@ -3,10 +3,13 @@ import { renderHook, waitFor, act } from '@testing-library/react-native';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { jwtDecode } from 'jwt-decode';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { AuthProvider, useAuth } from '@/features/auth/context/AuthContext';
 import { authEndpoints } from '@/data/api/endpoints/auth';
 import { cacheManager } from '@/data/cache/cacheManager';
+
+let mockSessionExpiredHandler: (() => void) | null = null;
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -38,12 +41,15 @@ jest.mock('@/data/api/endpoints/auth', () => ({
 }));
 
 jest.mock('@/data/api/client', () => ({
-  registerSessionExpiredHandler: jest.fn(),
+  registerSessionExpiredHandler: jest.fn((handler: () => void) => {
+    mockSessionExpiredHandler = handler;
+  }),
 }));
 
 jest.mock('@/data/cache/cacheManager', () => ({
   cacheManager: {
-    clear: jest.fn(),
+    clearAll: jest.fn(),
+    clearLegacy: jest.fn(),
   },
 }));
 
@@ -88,9 +94,14 @@ const mockedAsyncStorage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
 const mockedJwtDecode = jwtDecode as jest.MockedFunction<typeof jwtDecode>;
 const mockedAuthEndpoints = authEndpoints as jest.Mocked<typeof authEndpoints>;
 const mockedCacheManager = cacheManager as jest.Mocked<typeof cacheManager>;
+let testQueryClient: QueryClient;
 
-function wrapper({ children }: { children: React.ReactNode }) {
-  return <AuthProvider>{children}</AuthProvider>;
+function Wrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <QueryClientProvider client={testQueryClient}>
+      <AuthProvider>{children}</AuthProvider>
+    </QueryClientProvider>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -100,6 +111,8 @@ function wrapper({ children }: { children: React.ReactNode }) {
 describe('AuthContext', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSessionExpiredHandler = null;
+    testQueryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     // Default: no stored token, no onboarding flag
     mockedSecureStore.getItemAsync.mockResolvedValue(null);
     mockedAsyncStorage.getItem.mockResolvedValue(null);
@@ -107,7 +120,8 @@ describe('AuthContext', () => {
     mockedSecureStore.deleteItemAsync.mockResolvedValue();
     mockedAsyncStorage.setItem.mockResolvedValue();
     mockedAsyncStorage.removeItem.mockResolvedValue();
-    mockedCacheManager.clear.mockResolvedValue();
+    mockedCacheManager.clearAll.mockResolvedValue();
+    mockedCacheManager.clearLegacy.mockResolvedValue();
     mockedAuthEndpoints.logout.mockResolvedValue(undefined as never);
   });
 
@@ -120,7 +134,7 @@ describe('AuthContext', () => {
     mockedSecureStore.getItemAsync.mockImplementation(() => new Promise(() => {}));
 
     // Act
-    const { result } = renderHook(() => useAuth(), { wrapper });
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
 
     // Assert: before any async resolution, loading must be true
     expect(result.current.isLoading).toBe(true);
@@ -143,7 +157,7 @@ describe('AuthContext', () => {
     });
 
     // Act
-    const { result } = renderHook(() => useAuth(), { wrapper });
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
 
     // Assert
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -166,7 +180,7 @@ describe('AuthContext', () => {
     mockedJwtDecode.mockReturnValue(EXPIRED_JWT_PAYLOAD as never);
 
     // Act
-    const { result } = renderHook(() => useAuth(), { wrapper });
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
 
     // Assert
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -210,7 +224,7 @@ describe('AuthContext', () => {
     });
 
     // Act
-    const { result } = renderHook(() => useAuth(), { wrapper });
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
 
     // Assert
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -235,7 +249,7 @@ describe('AuthContext', () => {
     mockedJwtDecode.mockReturnValue(MOCK_JWT_PAYLOAD as never);
     mockedAsyncStorage.getItem.mockResolvedValue('true');
 
-    const { result } = renderHook(() => useAuth(), { wrapper });
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     // Act
@@ -266,7 +280,7 @@ describe('AuthContext', () => {
         : Promise.resolve(null),
     );
 
-    const { result } = renderHook(() => useAuth(), { wrapper });
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     // Act
@@ -289,7 +303,7 @@ describe('AuthContext', () => {
     mockedJwtDecode.mockReturnValue(MOCK_JWT_PAYLOAD as never);
     mockedAsyncStorage.getItem.mockResolvedValue('true');
 
-    const { result } = renderHook(() => useAuth(), { wrapper });
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.user).not.toBeNull();
 
@@ -307,7 +321,7 @@ describe('AuthContext', () => {
     expect(mockedAsyncStorage.removeItem).not.toHaveBeenCalledWith(
       expect.stringContaining('spoonrest.onboardingCompleted'),
     );
-    expect(mockedCacheManager.clear).toHaveBeenCalledTimes(1);
+    expect(mockedCacheManager.clearAll).toHaveBeenCalledTimes(1);
     expect(result.current.user).toBeNull();
     expect(result.current.sessionExpired).toBe(false);
   });
@@ -321,7 +335,7 @@ describe('AuthContext', () => {
     mockedAsyncStorage.getItem.mockResolvedValue('true');
     mockedAuthEndpoints.logout.mockRejectedValue(new Error('Network Error'));
 
-    const { result } = renderHook(() => useAuth(), { wrapper });
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.user).not.toBeNull();
 
@@ -334,8 +348,64 @@ describe('AuthContext', () => {
     expect(mockedAuthEndpoints.logout).toHaveBeenCalledTimes(1);
     expect(mockedSecureStore.deleteItemAsync).toHaveBeenCalledWith('accessToken');
     expect(mockedSecureStore.deleteItemAsync).toHaveBeenCalledWith('refreshToken');
-    expect(mockedCacheManager.clear).toHaveBeenCalledTimes(1);
+    expect(mockedCacheManager.clearAll).toHaveBeenCalledTimes(1);
     expect(result.current.user).toBeNull();
+  });
+
+  it('should_NotExposePreviousUsersQueryData_When_AnotherAccountLogsIn', async () => {
+    // Arrange: restore account A and put private data in the in-memory cache.
+    mockedSecureStore.getItemAsync.mockResolvedValue(MOCK_ACCESS_TOKEN);
+    mockedJwtDecode.mockReturnValue({ ...MOCK_JWT_PAYLOAD, sub: 'user-a' } as never);
+    mockedAsyncStorage.getItem.mockResolvedValue('true');
+
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.user?.id).toBe('user-a'));
+
+    testQueryClient.setQueryData(['tasks', 'user-a'], [{ id: 'private-task-a' }]);
+    expect(testQueryClient.getQueryData(['tasks', 'user-a'])).toBeDefined();
+
+    mockedAuthEndpoints.login.mockResolvedValue({
+      data: {
+        status: 'success' as const,
+        data: {
+          accessToken: 'access-token-b',
+          refreshToken: 'refresh-token-b',
+          userId: 'user-b',
+          firstName: 'Béatrice',
+        },
+        message: null,
+      },
+    } as never);
+
+    // Act: account A logs out, then account B logs in on the same provider/device.
+    await act(async () => {
+      await result.current.logout();
+      await result.current.login('b@example.com', 'password123');
+    });
+
+    // Assert: A's memory and persisted caches were purged before B became active.
+    expect(testQueryClient.getQueryData(['tasks', 'user-a'])).toBeUndefined();
+    expect(result.current.user?.id).toBe('user-b');
+    expect(mockedCacheManager.clearAll).toHaveBeenCalledTimes(2);
+  });
+
+  it('should_PurgePreviousUsersData_When_SessionExpiresBeforeAnotherLogin', async () => {
+    mockedSecureStore.getItemAsync.mockResolvedValue(MOCK_ACCESS_TOKEN);
+    mockedJwtDecode.mockReturnValue({ ...MOCK_JWT_PAYLOAD, sub: 'user-a' } as never);
+    mockedAsyncStorage.getItem.mockResolvedValue('true');
+
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.user?.id).toBe('user-a'));
+
+    testQueryClient.setQueryData(['energy', 'user-a', 'today'], { spoons: 2 });
+
+    act(() => {
+      mockSessionExpiredHandler?.();
+    });
+
+    await waitFor(() => expect(result.current.user).toBeNull());
+    expect(testQueryClient.getQueryData(['energy', 'user-a', 'today'])).toBeUndefined();
+    expect(mockedCacheManager.clearAll).toHaveBeenCalledTimes(1);
   });
 
   // -------------------------------------------------------------------------
@@ -347,7 +417,7 @@ describe('AuthContext', () => {
     mockedAuthEndpoints.register.mockResolvedValue(MOCK_AUTH_RESPONSE as never);
     mockedJwtDecode.mockReturnValue(MOCK_JWT_PAYLOAD as never);
 
-    const { result } = renderHook(() => useAuth(), { wrapper });
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     // Act
@@ -374,7 +444,7 @@ describe('AuthContext', () => {
     mockedAuthEndpoints.register.mockResolvedValue(MOCK_AUTH_RESPONSE as never);
     mockedJwtDecode.mockReturnValue(MOCK_JWT_PAYLOAD as never);
 
-    const { result } = renderHook(() => useAuth(), { wrapper });
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     // Act
@@ -400,7 +470,7 @@ describe('AuthContext', () => {
     mockedAuthEndpoints.register.mockResolvedValue(MOCK_AUTH_RESPONSE as never);
     mockedJwtDecode.mockReturnValue(MOCK_JWT_PAYLOAD as never);
 
-    const { result } = renderHook(() => useAuth(), { wrapper });
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     // Act
@@ -421,7 +491,7 @@ describe('AuthContext', () => {
     mockedAuthEndpoints.register.mockResolvedValue(MOCK_AUTH_RESPONSE as never);
     mockedJwtDecode.mockReturnValue(MOCK_JWT_PAYLOAD as never);
 
-    const { result } = renderHook(() => useAuth(), { wrapper });
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     await act(async () => {

@@ -7,6 +7,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { TaskResponse } from '@/data/api/endpoints/tasks';
 import { taskRepository } from '@/data/repositories/taskRepository';
 import { taskLogEndpoints } from '@/data/api/endpoints/taskLogs';
+import { queryKeys } from '@/data/query/queryKeys';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useDeclareRest } from '@/features/checkin/hooks/useDeclareRest';
 import { Button } from '@/components/ui/button-custom';
 import { BackButton } from '@/components/ui/BackButton';
@@ -15,6 +17,8 @@ import { COLORS } from '@/constants/colors';
 export default function CheckinStep1() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
   const queryClient = useQueryClient();
 
   const [restError, setRestError] = useState<string>('');
@@ -22,11 +26,12 @@ export default function CheckinStep1() {
   const today = new Date().toISOString().split('T')[0];
 
   const { data: overdueTasks = [], isLoading, isError } = useQuery({
-    queryKey: ['tasks', 'overdue'],
+    queryKey: queryKeys.overdueTasks(userId),
     queryFn: async () => {
-      const allTasks: TaskResponse[] = await taskRepository.getAll();
+      const allTasks: TaskResponse[] = await taskRepository.getAll(userId);
       return allTasks.filter((task) => task.dueDate < today);
     },
+    enabled: userId !== '',
   });
 
   const { mutate: bulkPostponeMutate, isPending: isPostponing } = useMutation({
@@ -34,7 +39,7 @@ export default function CheckinStep1() {
     // After postponing, continue the check-in flow to step 2 (was a dead end).
     // N1: push (not replace) so the back button can return here from step 2.
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['task-logs'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.taskLogs(userId) });
       router.push('/checkin/step2');
     },
   });

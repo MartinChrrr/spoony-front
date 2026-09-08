@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { taskRepository } from '@/data/repositories/taskRepository';
 import { taskLogRepository } from '@/data/repositories/taskLogRepository';
+import { queryKeys } from '@/data/query/queryKeys';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { BackButton } from '@/components/ui/BackButton';
 import { useToast } from '@/components/ui/Toast';
 import { COLORS } from '@/constants/colors';
@@ -36,6 +38,8 @@ function isImportance(value: string | undefined): value is Importance {
 export default function TaskNewScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
   const toast = useToast();
 
   // When launched from "Choisir un modèle", the screen is pre-filled from a
@@ -77,7 +81,7 @@ export default function TaskNewScreen() {
   const { mutateAsync, isPending } = useMutation({
     mutationFn: taskRepository.create,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks(userId) });
     },
   });
 
@@ -108,7 +112,7 @@ export default function TaskNewScreen() {
       if (dueDate !== '' && dueDate === localTodayISO() && created?.id) {
         try {
           await taskLogRepository.createManual(created.id);
-          queryClient.invalidateQueries({ queryKey: ['task-logs'] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.taskLogs(userId) });
           landedToday = true;
         } catch {
           // The task itself was created; a failed day-log must not break the

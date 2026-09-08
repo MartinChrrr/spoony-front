@@ -4,6 +4,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { taskRepository } from '@/data/repositories/taskRepository';
+import { queryKeys } from '@/data/query/queryKeys';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { BackButton } from '@/components/ui/BackButton';
 import { COLORS } from '@/constants/colors';
 import { Importance } from '@/data/api/types';
@@ -12,6 +14,8 @@ import { TaskForm, TaskFormValues } from '@/features/task/components/TaskForm';
 export default function TaskDetailScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -24,23 +28,23 @@ export default function TaskDetailScreen() {
   const queryClient = useQueryClient();
 
   const { data: task, isLoading } = useQuery({
-    queryKey: ['task', id],
-    queryFn: () => taskRepository.getById(id),
-    enabled: Boolean(id),
+    queryKey: queryKeys.task(userId, id),
+    queryFn: () => taskRepository.getById(userId, id),
+    enabled: userId !== '' && Boolean(id),
   });
 
   const { mutateAsync: updateMutateAsync, isPending: isUpdating } = useMutation({
     mutationFn: (data: Parameters<typeof taskRepository.update>[1]) =>
       taskRepository.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks(userId) });
     },
   });
 
   const { mutateAsync: deleteMutateAsync, isPending: isDeleting } = useMutation({
     mutationFn: () => taskRepository.remove(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks(userId) });
     },
   });
 

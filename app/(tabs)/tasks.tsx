@@ -11,7 +11,9 @@ import {
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { taskRepository } from '@/data/repositories/taskRepository';
+import { queryKeys } from '@/data/query/queryKeys';
 import { TaskResponse } from '@/data/api/endpoints/tasks';
 import { COLORS } from '@/constants/colors';
 
@@ -26,13 +28,16 @@ const IMPORTANCE_RANK: Record<string, number> = {
 export default function TasksScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [sortOption, setSortOption] = useState<SortOption>('none');
 
   const { data: tasks = [], isLoading, isError } = useQuery<TaskResponse[]>({
-    queryKey: ['tasks'],
-    queryFn: () => taskRepository.getAll(),
+    queryKey: queryKeys.tasks(userId),
+    queryFn: () => taskRepository.getAll(userId),
+    enabled: userId !== '',
   });
 
   const categories = useMemo<string[]>(() => {

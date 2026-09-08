@@ -9,8 +9,10 @@ import {
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { taskLogRepository } from '@/data/repositories/taskLogRepository';
 import { taskRepository } from '@/data/repositories/taskRepository';
+import { queryKeys } from '@/data/query/queryKeys';
 import { COLORS } from '@/constants/colors';
 import type { TaskLogResponse } from '@/data/api/endpoints/taskLogs';
 import type { TaskResponse } from '@/data/api/endpoints/tasks';
@@ -47,6 +49,8 @@ function toDateString(date: Date): string {
 export default function CalendarScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
 
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
@@ -64,13 +68,15 @@ export default function CalendarScreen(): React.ReactElement {
   );
 
   const { data: taskLogs = [] } = useQuery<TaskLogResponse[]>({
-    queryKey: ['task-logs', 'range', monthFrom, monthTo],
-    queryFn: () => taskLogRepository.getRange(monthFrom, monthTo),
+    queryKey: queryKeys.taskLogsRange(userId, monthFrom, monthTo),
+    queryFn: () => taskLogRepository.getRange(userId, monthFrom, monthTo),
+    enabled: userId !== '',
   });
 
   const { data: tasks = [] } = useQuery<TaskResponse[]>({
-    queryKey: ['tasks'],
-    queryFn: () => taskRepository.getAll(),
+    queryKey: queryKeys.tasks(userId),
+    queryFn: () => taskRepository.getAll(userId),
+    enabled: userId !== '',
   });
 
   // Map date string -> list of logs for that date

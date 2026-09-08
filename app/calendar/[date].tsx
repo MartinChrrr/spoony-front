@@ -3,8 +3,10 @@ import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { taskLogRepository } from '@/data/repositories/taskLogRepository';
 import { taskRepository } from '@/data/repositories/taskRepository';
+import { queryKeys } from '@/data/query/queryKeys';
 import { BackButton } from '@/components/ui/BackButton';
 import { COLORS } from '@/constants/colors';
 import type { TaskLogResponse } from '@/data/api/endpoints/taskLogs';
@@ -41,17 +43,20 @@ function statusLabelKey(status: TaskLogResponse['status']): string {
 
 export default function DayDetailScreen(): React.ReactElement {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
   const { date } = useLocalSearchParams<{ date: string }>();
   const dateStr = Array.isArray(date) ? date[0] : (date ?? '');
 
   const { data: taskLogs = [] } = useQuery<TaskLogResponse[]>({
-    queryKey: ['task-logs', 'range', dateStr, dateStr],
-    queryFn: () => taskLogRepository.getRange(dateStr, dateStr),
-    enabled: dateStr !== '',
+    queryKey: queryKeys.taskLogsRange(userId, dateStr, dateStr),
+    queryFn: () => taskLogRepository.getRange(userId, dateStr, dateStr),
+    enabled: userId !== '' && dateStr !== '',
   });
   const { data: tasks = [] } = useQuery<TaskResponse[]>({
-    queryKey: ['tasks'],
-    queryFn: () => taskRepository.getAll(),
+    queryKey: queryKeys.tasks(userId),
+    queryFn: () => taskRepository.getAll(userId),
+    enabled: userId !== '',
   });
 
   const dayTasks = useMemo<DayTask[]>(() => {

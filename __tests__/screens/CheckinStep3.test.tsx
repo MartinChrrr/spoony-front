@@ -26,6 +26,10 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
+jest.mock('@/features/auth/hooks/useAuth', () => ({
+  useAuth: () => ({ user: { id: 'user-1' } }),
+}));
+
 const mockMutateAsync = jest.fn().mockResolvedValue({});
 
 jest.mock('@tanstack/react-query', () => ({

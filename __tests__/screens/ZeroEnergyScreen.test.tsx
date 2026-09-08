@@ -22,6 +22,10 @@ jest.mock('@tanstack/react-query', () => ({
   useQueryClient: jest.fn(() => ({ invalidateQueries: jest.fn() })),
 }));
 
+jest.mock('@/features/auth/hooks/useAuth', () => ({
+  useAuth: () => ({ user: { id: 'user-1' } }),
+}));
+
 jest.mock('@/data/api/endpoints/messages', () => ({
   messageEndpoints: {
     getRandom: jest.fn(),

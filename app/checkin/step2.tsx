@@ -5,7 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 
 import { energyRepository } from '@/data/repositories/energyRepository';
+import { queryKeys } from '@/data/query/queryKeys';
 import type { EnergyResponse } from '@/data/api/endpoints/energy';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useDeclareRest } from '@/features/checkin/hooks/useDeclareRest';
 import { Button } from '@/components/ui/button-custom';
 import { BackButton } from '@/components/ui/BackButton';
@@ -84,6 +86,8 @@ function SpoonSlider({
 export default function CheckinStep2() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
 
   const [spoons, setSpoons] = useState<number>(DEFAULT_SPOONS);
   const [selectedPresetLabel, setSelectedPresetLabel] = useState<string>(DEFAULT_PRESET_LABEL);
@@ -95,8 +99,9 @@ export default function CheckinStep2() {
   // exists — pre-fill with the declared value instead of the default 8, so the
   // user isn't pushed to re-validate a number they didn't choose.
   const { data: existingEnergy } = useQuery<EnergyResponse | null>({
-    queryKey: ['energy', 'today'],
-    queryFn: () => energyRepository.getToday(),
+    queryKey: queryKeys.energyToday(userId),
+    queryFn: () => energyRepository.getToday(userId),
+    enabled: userId !== '',
   });
   const [prefilled, setPrefilled] = useState(false);
   useEffect(() => {

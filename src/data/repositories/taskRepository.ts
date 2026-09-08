@@ -15,22 +15,22 @@ const CACHE_KEYS = {
 } as const;
 
 export const taskRepository = {
-  getAll: async (): Promise<TaskResponse[]> => {
+  getAll: async (userId: string): Promise<TaskResponse[]> => {
     try {
       const response = await taskEndpoints.getAll();
       const tasks = response.data.data ?? [];
-      await cacheManager.set(CACHE_KEYS.ALL, tasks);
+      await cacheManager.setForUser(userId, CACHE_KEYS.ALL, tasks);
       return tasks;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response !== undefined) {
         throw error;
       }
-      const cached = await cacheManager.get<TaskResponse[]>(CACHE_KEYS.ALL);
+      const cached = await cacheManager.getForUser<TaskResponse[]>(userId, CACHE_KEYS.ALL);
       return cached ?? [];
     }
   },
 
-  getById: async (id: string): Promise<TaskResponse> => {
+  getById: async (userId: string, id: string): Promise<TaskResponse> => {
     try {
       const response = await taskEndpoints.getById(id);
       return response.data.data as TaskResponse;
@@ -38,7 +38,7 @@ export const taskRepository = {
       if (axios.isAxiosError(error) && error.response !== undefined) {
         throw error;
       }
-      const cached = await cacheManager.get<TaskResponse[]>(CACHE_KEYS.ALL);
+      const cached = await cacheManager.getForUser<TaskResponse[]>(userId, CACHE_KEYS.ALL);
       const found = cached?.find((t) => t.id === id);
       if (found) return found;
       throw error;
