@@ -11,11 +11,9 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { taskLogRepository } from '@/data/repositories/taskLogRepository';
-import { taskRepository } from '@/data/repositories/taskRepository';
 import { queryKeys } from '@/data/query/queryKeys';
 import { COLORS } from '@/constants/colors';
 import type { TaskLogResponse } from '@/data/api/endpoints/taskLogs';
-import type { TaskResponse } from '@/data/api/endpoints/tasks';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -73,12 +71,6 @@ export default function CalendarScreen(): React.ReactElement {
     enabled: userId !== '',
   });
 
-  const { data: tasks = [] } = useQuery<TaskResponse[]>({
-    queryKey: queryKeys.tasks(userId),
-    queryFn: () => taskRepository.getAll(userId),
-    enabled: userId !== '',
-  });
-
   // Map date string -> list of logs for that date
   const logsByDate = useMemo<Record<string, TaskLogResponse[]>>(() => {
     const map: Record<string, TaskLogResponse[]> = {};
@@ -115,15 +107,11 @@ export default function CalendarScreen(): React.ReactElement {
 
   // Spoons are derived from the day's task costs (consistent with the detail screen),
   // so any day — past or present — shows real numbers instead of "0 / 0".
-  const tasksById = useMemo(
-    () => new Map(tasks.map((task) => [task.id, task])),
-    [tasks],
-  );
   const spoonsUsed = selectedLogs
     .filter((l) => l.status === 'COMPLETED')
-    .reduce((sum, l) => sum + (tasksById.get(l.userTaskId)?.spoonCost ?? 0), 0);
+    .reduce((sum, l) => sum + l.spoonCost, 0);
   const spoonsTotal = selectedLogs.reduce(
-    (sum, l) => sum + (tasksById.get(l.userTaskId)?.spoonCost ?? 0),
+    (sum, l) => sum + l.spoonCost,
     0,
   );
   const spoonRatio = spoonsTotal > 0 ? Math.min(spoonsUsed / spoonsTotal, 1) : 0;

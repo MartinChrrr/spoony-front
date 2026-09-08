@@ -45,6 +45,8 @@ const MOCK_TASK_LOGS = [
   {
     id: 'log-1',
     userTaskId: 'task-1',
+    taskName: 'Boire de l’eau',
+    spoonCost: 2,
     date: '2026-04-10',
     status: 'COMPLETED',
     suggested: true,
@@ -55,6 +57,8 @@ const MOCK_TASK_LOGS = [
   {
     id: 'log-2',
     userTaskId: 'task-2',
+    taskName: 'Ranger',
+    spoonCost: 3,
     date: '2026-04-10',
     status: 'PLANNED',
     suggested: true,
@@ -65,6 +69,8 @@ const MOCK_TASK_LOGS = [
   {
     id: 'log-3',
     userTaskId: 'task-3',
+    taskName: 'Marcher',
+    spoonCost: 1,
     date: '2026-04-05',
     status: 'COMPLETED',
     suggested: false,

@@ -34,9 +34,9 @@ jest.mock('@/data/repositories/taskRepository', () => ({
 const mockedUseQuery = useQuery as jest.MockedFunction<typeof useQuery>;
 
 const MOCK_LOGS = [
-  { id: 'log-1', userTaskId: 'task-1', date: '2026-04-10', status: 'COMPLETED', suggested: true, completedAt: null, createdAt: '', updatedAt: '' },
-  { id: 'log-2', userTaskId: 'task-2', date: '2026-04-10', status: 'PLANNED', suggested: true, completedAt: null, createdAt: '', updatedAt: '' },
-  { id: 'log-3', userTaskId: 'task-3', date: '2026-04-09', status: 'COMPLETED', suggested: false, completedAt: null, createdAt: '', updatedAt: '' },
+  { id: 'log-1', userTaskId: 'task-1', taskName: 'Se doucher', spoonCost: 2, date: '2026-04-10', status: 'COMPLETED', suggested: true, completedAt: null, createdAt: '', updatedAt: '' },
+  { id: 'log-2', userTaskId: 'task-2', taskName: 'Faire les courses', spoonCost: 3, date: '2026-04-10', status: 'PLANNED', suggested: true, completedAt: null, createdAt: '', updatedAt: '' },
+  { id: 'log-3', userTaskId: 'task-3', taskName: 'Ancienne tâche', spoonCost: 1, date: '2026-04-09', status: 'COMPLETED', suggested: false, completedAt: null, createdAt: '', updatedAt: '' },
 ];
 
 const MOCK_TASKS = [

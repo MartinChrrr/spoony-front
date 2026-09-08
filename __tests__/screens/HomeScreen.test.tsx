@@ -88,6 +88,8 @@ const MOCK_TASK_LOGS: TaskLogResponse[] = [
   {
     id: 'log-1',
     userTaskId: 'task-1',
+    taskName: 'Faire le ménage',
+    spoonCost: 2,
     date: '2026-04-06',
     status: 'PLANNED',
     suggested: true,
@@ -98,6 +100,8 @@ const MOCK_TASK_LOGS: TaskLogResponse[] = [
   {
     id: 'log-2',
     userTaskId: 'task-2',
+    taskName: 'Courses',
+    spoonCost: 3,
     date: '2026-04-06',
     status: 'COMPLETED',
     suggested: true,

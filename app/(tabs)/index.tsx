@@ -93,8 +93,8 @@ export default function HomeScreen(): React.ReactElement {
   >({
     mutationFn: ({ id, status }: UpdateStatusArgs) =>
       taskLogRepository.updateStatus(id, { status }),
-    onSuccess: () => {
-      // Refresh the day's logs + energy so the list and rest system update.
+    onSettled: () => {
+      // Also refresh after a 409: another device may have committed the truth.
       queryClient.invalidateQueries({ queryKey: queryKeys.taskLogs(userId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.energyToday(userId) });
     },
@@ -103,10 +103,9 @@ export default function HomeScreen(): React.ReactElement {
   const todayItems = useMemo<Array<{ log: TaskLogResponse; taskName: string }>>(
     () =>
       (taskLogs ?? []).map((log) => {
-        const task = (tasks ?? []).find((t) => t.id === log.userTaskId);
-        return { log, taskName: task?.name ?? '' };
+        return { log, taskName: log.taskName };
       }),
-    [taskLogs, tasks],
+    [taskLogs],
   );
 
   // ---- Rest system (3 levels) -------------------------------------------

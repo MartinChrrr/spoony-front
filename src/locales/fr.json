@@ -294,16 +294,16 @@
     "fromTemplate": "Depuis modèle",
     "added": "Ajoutée à tes tâches",
     "addedToday": "Ajoutée à aujourd'hui",
-    "deleteButton": "Supprimer la tâche",
-    "delete": "Supprimer la tâche",
-    "deleteConfirmTitle": "Supprimer cette tâche ?",
-    "deleteConfirmMessage": "Cette action est irréversible.",
-    "deleteConfirm": "Cette action est irréversible.",
-    "deleteConfirmButton": "Supprimer",
-    "confirmDelete": "Supprimer",
+    "deleteButton": "Archiver la tâche",
+    "delete": "Archiver la tâche",
+    "deleteConfirmTitle": "Archiver cette tâche ?",
+    "deleteConfirmMessage": "Elle disparaîtra de vos tâches actives, mais son historique sera conservé.",
+    "deleteConfirm": "Elle disparaîtra de vos tâches actives, mais son historique sera conservé.",
+    "deleteConfirmButton": "Archiver",
+    "confirmDelete": "Archiver",
     "cancelButton": "Annuler",
     "errorSaving": "Pas enregistré, on réessaie.",
-    "errorDeleting": "Pas supprimé, on réessaie."
+    "errorDeleting": "Pas archivée, on réessaie."
   },
   "messages": {
     "welcome": {

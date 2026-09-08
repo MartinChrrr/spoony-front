@@ -4,6 +4,8 @@ import { JSendResponse, TaskLogStatus } from '../types';
 export interface TaskLogResponse {
   id: string;
   userTaskId: string;
+  taskName: string;
+  spoonCost: number;
   date: string;
   status: TaskLogStatus;
   suggested: boolean;

@@ -5,12 +5,10 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { taskLogRepository } from '@/data/repositories/taskLogRepository';
-import { taskRepository } from '@/data/repositories/taskRepository';
 import { queryKeys } from '@/data/query/queryKeys';
 import { BackButton } from '@/components/ui/BackButton';
 import { COLORS } from '@/constants/colors';
 import type { TaskLogResponse } from '@/data/api/endpoints/taskLogs';
-import type { TaskResponse } from '@/data/api/endpoints/tasks';
 
 // ---------------------------------------------------------------------------
 // "Détail du jour" — labelled spoon distribution + the day's task list.
@@ -53,26 +51,18 @@ export default function DayDetailScreen(): React.ReactElement {
     queryFn: () => taskLogRepository.getRange(userId, dateStr, dateStr),
     enabled: userId !== '' && dateStr !== '',
   });
-  const { data: tasks = [] } = useQuery<TaskResponse[]>({
-    queryKey: queryKeys.tasks(userId),
-    queryFn: () => taskRepository.getAll(userId),
-    enabled: userId !== '',
-  });
-
   const dayTasks = useMemo<DayTask[]>(() => {
-    const tasksById = new Map(tasks.map((task) => [task.id, task]));
     return taskLogs
       .filter((log) => log.date === dateStr)
       .map((log) => {
-        const task = tasksById.get(log.userTaskId);
         return {
           logId: log.id,
-          name: task?.name ?? '',
-          spoonCost: task?.spoonCost ?? 0,
+          name: log.taskName,
+          spoonCost: log.spoonCost,
           status: log.status,
         };
       });
-  }, [taskLogs, tasks, dateStr]);
+  }, [taskLogs, dateStr]);
 
   const completedSpoons = dayTasks
     .filter((dt) => dt.status === 'COMPLETED')

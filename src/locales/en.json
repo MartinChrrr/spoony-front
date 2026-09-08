@@ -294,16 +294,16 @@
     "fromTemplate": "From template",
     "added": "Added to your tasks",
     "addedToday": "Added to today",
-    "deleteButton": "Delete task",
-    "delete": "Delete task",
-    "deleteConfirmTitle": "Delete this task?",
-    "deleteConfirmMessage": "This action cannot be undone.",
-    "deleteConfirm": "This action cannot be undone.",
-    "deleteConfirmButton": "Delete",
-    "confirmDelete": "Delete",
+    "deleteButton": "Archive task",
+    "delete": "Archive task",
+    "deleteConfirmTitle": "Archive this task?",
+    "deleteConfirmMessage": "It will leave your active tasks, but its history will be preserved.",
+    "deleteConfirm": "It will leave your active tasks, but its history will be preserved.",
+    "deleteConfirmButton": "Archive",
+    "confirmDelete": "Archive",
     "cancelButton": "Cancel",
     "errorSaving": "Not saved — let's try again.",
-    "errorDeleting": "Not deleted — let's try again."
+    "errorDeleting": "Not archived — let's try again."
   },
   "messages": {
     "welcome": {
