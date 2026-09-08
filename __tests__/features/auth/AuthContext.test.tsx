@@ -8,8 +8,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '@/features/auth/context/AuthContext';
 import { authEndpoints } from '@/data/api/endpoints/auth';
 import { cacheManager } from '@/data/cache/cacheManager';
+import { isRefreshTokenRejected } from '@/data/api/client';
 
-let mockSessionExpiredHandler: (() => void) | null = null;
+let mockSessionExpiredHandler: (() => void | Promise<void>) | null = null;
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -41,9 +42,14 @@ jest.mock('@/data/api/endpoints/auth', () => ({
 }));
 
 jest.mock('@/data/api/client', () => ({
-  registerSessionExpiredHandler: jest.fn((handler: () => void) => {
+  registerSessionExpiredHandler: jest.fn((handler: () => void | Promise<void>) => {
     mockSessionExpiredHandler = handler;
+    return () => {
+      if (mockSessionExpiredHandler === handler) mockSessionExpiredHandler = null;
+    };
   }),
+  resetSessionExpiration: jest.fn(),
+  isRefreshTokenRejected: jest.fn(),
 }));
 
 jest.mock('@/data/cache/cacheManager', () => ({
@@ -94,6 +100,9 @@ const mockedAsyncStorage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
 const mockedJwtDecode = jwtDecode as jest.MockedFunction<typeof jwtDecode>;
 const mockedAuthEndpoints = authEndpoints as jest.Mocked<typeof authEndpoints>;
 const mockedCacheManager = cacheManager as jest.Mocked<typeof cacheManager>;
+const mockedIsRefreshTokenRejected = isRefreshTokenRejected as jest.MockedFunction<
+  typeof isRefreshTokenRejected
+>;
 let testQueryClient: QueryClient;
 
 function Wrapper({ children }: { children: React.ReactNode }) {
@@ -112,6 +121,7 @@ describe('AuthContext', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSessionExpiredHandler = null;
+    mockedIsRefreshTokenRejected.mockReturnValue(false);
     testQueryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     // Default: no stored token, no onboarding flag
     mockedSecureStore.getItemAsync.mockResolvedValue(null);
@@ -171,12 +181,14 @@ describe('AuthContext', () => {
   });
 
   // -------------------------------------------------------------------------
-  // 3. Expired token -> user stays null
+  // 3. Expired token without refresh token -> definitive expiration
   // -------------------------------------------------------------------------
 
   it('should_NotLoadUser_When_TokenExpired', async () => {
     // Arrange
-    mockedSecureStore.getItemAsync.mockResolvedValue(MOCK_ACCESS_TOKEN);
+    mockedSecureStore.getItemAsync.mockImplementation((key) =>
+      key === 'accessToken' ? Promise.resolve(MOCK_ACCESS_TOKEN) : Promise.resolve(null),
+    );
     mockedJwtDecode.mockReturnValue(EXPIRED_JWT_PAYLOAD as never);
 
     // Act
@@ -186,6 +198,9 @@ describe('AuthContext', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(result.current.user).toBeNull();
+    expect(result.current.sessionExpired).toBe(true);
+    expect(mockedSecureStore.deleteItemAsync).toHaveBeenCalledWith('accessToken');
+    expect(mockedSecureStore.deleteItemAsync).toHaveBeenCalledWith('refreshToken');
   });
 
   // -------------------------------------------------------------------------
@@ -237,6 +252,51 @@ describe('AuthContext', () => {
     });
     expect(mockedSecureStore.setItemAsync).toHaveBeenCalledWith('accessToken', NEW_ACCESS_TOKEN);
     expect(mockedSecureStore.setItemAsync).toHaveBeenCalledWith('refreshToken', NEW_REFRESH_TOKEN);
+  });
+
+  it('should_RestoreOfflineUserAndKeepTokens_When_RefreshHasNoResponse', async () => {
+    mockedSecureStore.getItemAsync.mockImplementation((key) => {
+      if (key === 'accessToken') return Promise.resolve(MOCK_ACCESS_TOKEN);
+      if (key === 'refreshToken') return Promise.resolve(MOCK_REFRESH_TOKEN);
+      return Promise.resolve(null);
+    });
+    mockedJwtDecode.mockReturnValue(EXPIRED_JWT_PAYLOAD as never);
+    mockedAuthEndpoints.refresh.mockRejectedValue(new Error('Network Error'));
+    mockedIsRefreshTokenRejected.mockReturnValue(false);
+    mockedAsyncStorage.getItem.mockImplementation((key) => {
+      if (key === 'spoonrest.userEmail') return Promise.resolve('test@example.com');
+      if (key === 'spoonrest.userFirstName') return Promise.resolve('Jean');
+      if (key === 'spoonrest.onboardingCompleted.user-123') return Promise.resolve('true');
+      return Promise.resolve(null);
+    });
+
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.user?.id).toBe('user-123');
+    expect(result.current.sessionExpired).toBe(false);
+    expect(mockedSecureStore.deleteItemAsync).not.toHaveBeenCalled();
+    expect(mockedCacheManager.clearAll).not.toHaveBeenCalled();
+  });
+
+  it('should_ExpireSessionAndPurgeData_When_RefreshTokenIsRejected', async () => {
+    mockedSecureStore.getItemAsync.mockImplementation((key) => {
+      if (key === 'accessToken') return Promise.resolve(MOCK_ACCESS_TOKEN);
+      if (key === 'refreshToken') return Promise.resolve(MOCK_REFRESH_TOKEN);
+      return Promise.resolve(null);
+    });
+    mockedJwtDecode.mockReturnValue(EXPIRED_JWT_PAYLOAD as never);
+    mockedAuthEndpoints.refresh.mockRejectedValue(new Error('401'));
+    mockedIsRefreshTokenRejected.mockReturnValue(true);
+
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.user).toBeNull();
+    expect(result.current.sessionExpired).toBe(true);
+    expect(mockedSecureStore.deleteItemAsync).toHaveBeenCalledWith('accessToken');
+    expect(mockedSecureStore.deleteItemAsync).toHaveBeenCalledWith('refreshToken');
+    expect(mockedCacheManager.clearAll).toHaveBeenCalledTimes(1);
   });
 
   // -------------------------------------------------------------------------
@@ -389,7 +449,7 @@ describe('AuthContext', () => {
     expect(mockedCacheManager.clearAll).toHaveBeenCalledTimes(2);
   });
 
-  it('should_PurgePreviousUsersData_When_SessionExpiresBeforeAnotherLogin', async () => {
+  it('should_ExpireOnlyOnceAndNotCallLogout_When_ConcurrentRequestsRejectRefresh', async () => {
     mockedSecureStore.getItemAsync.mockResolvedValue(MOCK_ACCESS_TOKEN);
     mockedJwtDecode.mockReturnValue({ ...MOCK_JWT_PAYLOAD, sub: 'user-a' } as never);
     mockedAsyncStorage.getItem.mockResolvedValue('true');
@@ -401,11 +461,14 @@ describe('AuthContext', () => {
 
     act(() => {
       mockSessionExpiredHandler?.();
+      mockSessionExpiredHandler?.();
     });
 
     await waitFor(() => expect(result.current.user).toBeNull());
     expect(testQueryClient.getQueryData(['energy', 'user-a', 'today'])).toBeUndefined();
     expect(mockedCacheManager.clearAll).toHaveBeenCalledTimes(1);
+    expect(mockedAuthEndpoints.logout).not.toHaveBeenCalled();
+    expect(result.current.sessionExpired).toBe(true);
   });
 
   // -------------------------------------------------------------------------

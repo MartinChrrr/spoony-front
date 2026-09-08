@@ -9,7 +9,7 @@ import { COLORS } from '@/constants/colors';
 import { isValidEmail } from '@/utils/validation';
 
 export default function LoginScreen(): React.ReactElement {
-  const { login } = useAuth();
+  const { login, sessionExpired } = useAuth();
   const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
@@ -21,6 +21,12 @@ export default function LoginScreen(): React.ReactElement {
   const passwordRef = useRef<TextInput>(null);
 
   useEffect(() => () => { isMounted.current = false; }, []);
+
+  useEffect(() => {
+    if (sessionExpired) {
+      setError(t('auth.sessionExpired'));
+    }
+  }, [sessionExpired, t]);
 
   const isValid = isValidEmail(email.trim()) && password.length > 0;
 

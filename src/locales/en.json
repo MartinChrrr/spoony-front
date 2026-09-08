@@ -25,6 +25,7 @@
     "loginButtonHint": "Tap to log in to your account",
     "loginError": "Invalid email or password",
     "wrongCredentials": "Invalid email or password",
+    "sessionExpired": "Your session has expired. Log in again to continue.",
     "goToRegister": "No account yet? Sign up",
     "goToRegisterHint": "Opens the registration page",
     "registerSubtitle": "Create your account",

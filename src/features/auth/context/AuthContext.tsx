@@ -1,11 +1,24 @@
-import { createContext, useCallback, useContext, useEffect, useState, ReactNode, ReactElement } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  ReactNode,
+  ReactElement,
+} from 'react';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { jwtDecode } from 'jwt-decode';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { authEndpoints } from '@/data/api/endpoints/auth';
-import { registerSessionExpiredHandler } from '@/data/api/client';
+import {
+  isRefreshTokenRejected,
+  registerSessionExpiredHandler,
+  resetSessionExpiration,
+} from '@/data/api/client';
 import { cacheManager } from '@/data/cache/cacheManager';
 import { User } from '../types';
 
@@ -61,6 +74,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
   const [isLoading, setIsLoading] = useState(true);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(true);
+  const expirationInProgress = useRef(false);
 
   const clearAccountCaches = useCallback(async (): Promise<void> => {
     // Stop requests started by the previous identity before dropping their
@@ -71,6 +85,26 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
     await cacheManager.clearAll();
   }, [queryClient]);
 
+  const clearStoredSession = useCallback(async (): Promise<void> => {
+    await clearAccountCaches();
+    await Promise.allSettled([
+      SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN),
+      SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN),
+      AsyncStorage.removeItem('spoonrest.userEmail'),
+      AsyncStorage.removeItem('spoonrest.userFirstName'),
+    ]);
+  }, [clearAccountCaches]);
+
+  const expireSession = useCallback(async (): Promise<void> => {
+    if (expirationInProgress.current) return;
+
+    expirationInProgress.current = true;
+    setSessionExpired(true);
+    await clearStoredSession();
+    setUser(null);
+    setHasCompletedOnboarding(true);
+  }, [clearStoredSession]);
+
   const logout = useCallback(async (): Promise<void> => {
     // Revoke the refresh token server-side first. On a shared aidant/aidé device
     // we must still wipe local credentials even if this call fails (no network,
@@ -80,17 +114,15 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
     } catch {
       // Swallow: local purge below is the security-critical step.
     }
-    await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-    await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
     // M4: do NOT remove the per-user onboarding flag on logout — it must persist
     // so a returning user is not asked to redo onboarding.
-    await AsyncStorage.removeItem('spoonrest.userEmail');
-    await AsyncStorage.removeItem('spoonrest.userFirstName');
-    await clearAccountCaches();
+    await clearStoredSession();
+    expirationInProgress.current = false;
+    resetSessionExpiration();
     setUser(null);
     setSessionExpired(false);
     setHasCompletedOnboarding(true);
-  }, [clearAccountCaches]);
+  }, [clearStoredSession]);
 
   useEffect(() => {
     const restoreSession = async (): Promise<void> => {
@@ -101,7 +133,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
 
         const storedToken = await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
         if (storedToken === null) {
-          await clearAccountCaches();
+          await clearStoredSession();
           return;
         }
 
@@ -113,7 +145,7 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
         if (isExpired) {
           const refreshToken = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
           if (refreshToken === null) {
-            await clearAccountCaches();
+            await expireSession();
             return;
           }
 
@@ -121,16 +153,22 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
             const response = await authEndpoints.refresh({ refreshToken });
             const tokens = response.data.data;
             if (tokens === null) {
-              await clearAccountCaches();
+              await expireSession();
               return;
             }
 
             await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, tokens.accessToken);
             await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, tokens.refreshToken);
             activeToken = tokens.accessToken;
-          } catch {
-            await clearAccountCaches();
-            return;
+          } catch (refreshError) {
+            if (isRefreshTokenRejected(refreshError)) {
+              await expireSession();
+              return;
+            }
+
+            // No HTTP response, timeout, rate limiting or server failure: keep
+            // the expired access token and restore the local identity. Protected
+            // repositories can then serve that user's isolated offline cache.
           }
         }
 
@@ -146,25 +184,27 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
             firstName: storedFirstName ?? '',
           });
           const onboardingValue = await AsyncStorage.getItem(onboardingKey(userId));
+          expirationInProgress.current = false;
+          resetSessionExpiration();
+          setSessionExpired(false);
           setHasCompletedOnboarding(onboardingValue !== null);
         } else {
-          await clearAccountCaches();
+          await expireSession();
         }
       } catch (error) {
         console.error('[AuthContext] Failed to restore session:', error);
-        await clearAccountCaches();
+        await expireSession();
       } finally {
         setIsLoading(false);
       }
     };
 
-    registerSessionExpiredHandler(() => {
-      setSessionExpired(true);
-      void logout();
-    });
+    const unregisterSessionExpiredHandler = registerSessionExpiredHandler(expireSession);
 
     void restoreSession();
-  }, [clearAccountCaches, logout]);
+
+    return unregisterSessionExpiredHandler;
+  }, [clearStoredSession, expireSession]);
 
   const login = async (email: string, password: string): Promise<void> => {
     const response = await authEndpoints.login({ email, password });
@@ -184,6 +224,9 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
     await AsyncStorage.setItem('spoonrest.userEmail', email);
     await AsyncStorage.setItem('spoonrest.userFirstName', firstName);
     const onboardingValue = await AsyncStorage.getItem(onboardingKey(userId));
+    expirationInProgress.current = false;
+    resetSessionExpiration();
+    setSessionExpired(false);
     setHasCompletedOnboarding(onboardingValue !== null);
     setUser({ id: userId, email, firstName });
   };
@@ -209,6 +252,9 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
 
     await AsyncStorage.setItem('spoonrest.userEmail', email);
     await AsyncStorage.setItem('spoonrest.userFirstName', firstName);
+    expirationInProgress.current = false;
+    resetSessionExpiration();
+    setSessionExpired(false);
     setHasCompletedOnboarding(false);
     setUser({ id: userId, email, firstName });
   };

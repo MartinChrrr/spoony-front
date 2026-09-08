@@ -4,63 +4,152 @@ import axios, {
   AxiosResponse,
   InternalAxiosRequestConfig,
 } from 'axios';
-import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
+
+import { authEndpoints } from './endpoints/auth';
+import { API_BASE_URL, API_TIMEOUT_MS } from './config';
 
 const STORAGE_KEYS = {
   ACCESS_TOKEN: 'accessToken',
   REFRESH_TOKEN: 'refreshToken',
 } as const;
 
-const TIMEOUT_MS = 10_000;
+type SessionExpiredHandler = () => void | Promise<void>;
+type RetryableRequest = InternalAxiosRequestConfig & { _retry?: boolean };
 
-interface RefreshTokenResponse {
-  status: string;
-  data: {
-    accessToken: string;
-    refreshToken: string;
+class MissingRefreshTokenError extends Error {
+  constructor() {
+    super('NO_REFRESH_TOKEN');
+    this.name = 'MissingRefreshTokenError';
+  }
+}
+
+class InvalidRefreshResponseError extends Error {
+  constructor() {
+    super('INVALID_REFRESH_RESPONSE');
+    this.name = 'InvalidRefreshResponseError';
+  }
+}
+
+let onSessionExpired: SessionExpiredHandler | null = null;
+let refreshPromise: Promise<string> | null = null;
+let sessionExpirationNotified = false;
+let sessionExpirationPromise: Promise<void> | null = null;
+
+/** Register the single app-level transition to an expired session. */
+export function registerSessionExpiredHandler(handler: SessionExpiredHandler): () => void {
+  onSessionExpired = handler;
+
+  return () => {
+    if (onSessionExpired === handler) {
+      onSessionExpired = null;
+    }
   };
 }
 
-interface QueueEntry {
-  resolve: (token: string) => void;
-  reject: (error: AxiosError) => void;
+/** A successful login/register/refresh starts a fresh expiration lifecycle. */
+export function resetSessionExpiration(): void {
+  sessionExpirationNotified = false;
+  sessionExpirationPromise = null;
 }
 
-type SessionExpiredHandler = () => void;
-
-let onSessionExpired: SessionExpiredHandler | null = null;
-
-export function registerSessionExpiredHandler(handler: SessionExpiredHandler): void {
-  onSessionExpired = handler;
+/**
+ * The backend documents 401 for a rejected refresh token. 400/403 are also
+ * definitive credential failures; network errors, timeouts, 429 and 5xx are
+ * transient and must preserve the local session for offline use.
+ */
+export function isRefreshTokenRejected(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) return false;
+  const status = error.response?.status;
+  return status === 400 || status === 401 || status === 403;
 }
 
-let isRefreshing = false;
-let failedQueue: QueueEntry[] = [];
-
-function processQueue(error: AxiosError | null, token: string | null): void {
-  failedQueue.forEach((entry) => {
-    if (error !== null) {
-      entry.reject(error);
-    } else if (token !== null) {
-      entry.resolve(token);
-    }
-  });
-
-  failedQueue = [];
+function isAuthenticationRoute(url: string | undefined): boolean {
+  return typeof url === 'string' && url.split('?')[0].includes('/api/auth/');
 }
 
-const baseURL = Constants.expoConfig?.extra?.apiBaseUrl;
-
-if (typeof baseURL !== 'string' || baseURL.length === 0) {
-  throw new Error(
-    '[api/client] apiBaseUrl is not defined. Check app.json extra.apiBaseUrl and your API_BASE_URL env variable.'
+function isDefinitiveRefreshFailure(error: unknown): boolean {
+  return (
+    error instanceof MissingRefreshTokenError ||
+    error instanceof InvalidRefreshResponseError ||
+    isRefreshTokenRejected(error)
   );
 }
 
+function asAxiosError(error: unknown): AxiosError {
+  if (axios.isAxiosError(error)) return error;
+
+  const wrapped = new AxiosError(
+    error instanceof Error ? error.message : 'TOKEN_REFRESH_FAILED',
+    'ERR_REFRESH_FAILED',
+  );
+  (wrapped as { cause?: unknown }).cause = error;
+  return wrapped;
+}
+
+/**
+ * Delete credentials and notify React exactly once, even when several API
+ * requests all observe the same rejected refresh concurrently.
+ */
+async function expireSessionOnce(): Promise<void> {
+  if (sessionExpirationNotified) {
+    await sessionExpirationPromise;
+    return;
+  }
+
+  sessionExpirationNotified = true;
+  sessionExpirationPromise = (async () => {
+    await Promise.allSettled([
+      SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN),
+      SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN),
+    ]);
+    await onSessionExpired?.();
+  })();
+
+  await sessionExpirationPromise;
+}
+
+async function refreshAccessToken(): Promise<string> {
+  const refreshToken = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+
+  if (refreshToken === null) {
+    throw new MissingRefreshTokenError();
+  }
+
+  const response = await authEndpoints.refresh({ refreshToken });
+  const tokens = response.data.data;
+
+  if (
+    tokens === null ||
+    typeof tokens.accessToken !== 'string' ||
+    tokens.accessToken.length === 0 ||
+    typeof tokens.refreshToken !== 'string' ||
+    tokens.refreshToken.length === 0
+  ) {
+    throw new InvalidRefreshResponseError();
+  }
+
+  await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, tokens.accessToken);
+  await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, tokens.refreshToken);
+  resetSessionExpiration();
+
+  return tokens.accessToken;
+}
+
+/** All 401s raised together await the same rotating refresh token request. */
+function getRefreshedAccessToken(): Promise<string> {
+  if (refreshPromise === null) {
+    refreshPromise = refreshAccessToken().finally(() => {
+      refreshPromise = null;
+    });
+  }
+
+  return refreshPromise;
+}
+
 export const api: AxiosInstance = axios.create({
-  baseURL,
-  timeout: TIMEOUT_MS,
+  baseURL: API_BASE_URL,
+  timeout: API_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -82,76 +171,38 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as
-      | (InternalAxiosRequestConfig & { _retry?: boolean })
-      | undefined;
+    const originalRequest = error.config as RetryableRequest | undefined;
 
-    if (!originalRequest || error.response?.status !== 401 || originalRequest._retry === true) {
+    if (
+      originalRequest === undefined ||
+      error.response?.status !== 401 ||
+      isAuthenticationRoute(originalRequest.url)
+    ) {
       return Promise.reject(error);
     }
 
-    if (isRefreshing) {
-      return new Promise<AxiosResponse>((resolve, reject) => {
-        failedQueue.push({
-          resolve: (token: string) => {
-            originalRequest.headers.set('Authorization', `Bearer ${token}`);
-            resolve(api(originalRequest));
-          },
-          reject: (queueError: AxiosError) => {
-            reject(queueError);
-          },
-        });
-      });
+    // A freshly rotated access token was rejected too: stop here rather than
+    // entering a second refresh cycle.
+    if (originalRequest._retry === true) {
+      await expireSessionOnce();
+      return Promise.reject(error);
     }
 
     originalRequest._retry = true;
-    isRefreshing = true;
 
     try {
-      const refreshToken = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
-
-      if (refreshToken === null) {
-        throw new AxiosError('NO_REFRESH_TOKEN', 'ERR_NO_REFRESH_TOKEN');
-      }
-
-      const response = await axios.post<RefreshTokenResponse>(
-        `${baseURL}/api/auth/refresh`,
-        { refreshToken },
-        { timeout: TIMEOUT_MS },
-      );
-
-      const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data.data;
-
-      await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
-      await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
-
+      const newAccessToken = await getRefreshedAccessToken();
       originalRequest.headers.set('Authorization', `Bearer ${newAccessToken}`);
-
-      isRefreshing = false;
-      processQueue(null, newAccessToken);
-
       return api(originalRequest);
     } catch (refreshError) {
-      const axiosRefreshError =
-        refreshError instanceof AxiosError
-          ? refreshError
-          : new AxiosError(
-              refreshError instanceof Error ? refreshError.message : 'TOKEN_REFRESH_FAILED',
-              'ERR_REFRESH_FAILED',
-            );
-      if (!(refreshError instanceof AxiosError)) {
-        (axiosRefreshError as { cause?: unknown }).cause = refreshError;
+      if (isDefinitiveRefreshFailure(refreshError)) {
+        await expireSessionOnce();
       }
 
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
-
-      isRefreshing = false;
-      processQueue(axiosRefreshError, null);
-
-      onSessionExpired?.();
-
-      return Promise.reject(axiosRefreshError);
+      // A transient refresh failure deliberately leaves both tokens intact.
+      // Repositories receive the network error and can serve the current user's
+      // isolated offline cache instead of forcing a logout.
+      return Promise.reject(asAxiosError(refreshError));
     }
   },
 );

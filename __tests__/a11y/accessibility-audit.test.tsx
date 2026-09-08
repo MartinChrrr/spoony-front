@@ -30,7 +30,12 @@ jest.mock('expo-secure-store', () => ({
 }));
 jest.mock('@/data/api/client', () => ({
   registerSessionExpiredHandler: jest.fn(),
+  resetSessionExpiration: jest.fn(),
+  isRefreshTokenRejected: jest.fn(() => false),
   api: { post: jest.fn(), get: jest.fn(), delete: jest.fn() },
+}));
+jest.mock('@/data/api/authClient', () => ({
+  authApi: { post: jest.fn() },
 }));
 jest.mock('@/data/cache/cacheManager', () => ({
   cacheManager: { clear: jest.fn() },

@@ -9,10 +9,12 @@ import LoginScreen from '../../app/(auth)/login';
 // ---------------------------------------------------------------------------
 
 const mockLogin = jest.fn();
+let mockSessionExpired = false;
 
 jest.mock('@/features/auth/hooks/useAuth', () => ({
   useAuth: () => ({
     login: mockLogin,
+    sessionExpired: mockSessionExpired,
   }),
 }));
 
@@ -61,6 +63,15 @@ function buildAxiosError(status?: number): AxiosError {
 describe('LoginScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSessionExpired = false;
+  });
+
+  it('should_ShowSessionExpiredMessage_When_AuthSessionWasRejected', () => {
+    mockSessionExpired = true;
+
+    const { getByText } = render(<LoginScreen />);
+
+    expect(getByText('auth.sessionExpired')).toBeTruthy();
   });
 
   // 1. Inputs are rendered on load

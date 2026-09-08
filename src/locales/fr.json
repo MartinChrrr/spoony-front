@@ -25,6 +25,7 @@
     "loginButtonHint": "Appuyez pour vous connecter à votre compte",
     "loginError": "Email ou mot de passe incorrect",
     "wrongCredentials": "Email ou mot de passe incorrect",
+    "sessionExpired": "Votre session a expiré. Reconnectez-vous pour continuer.",
     "goToRegister": "Pas encore de compte ? S'inscrire",
     "goToRegisterHint": "Ouvre la page d'inscription",
     "registerSubtitle": "Créez votre compte",
